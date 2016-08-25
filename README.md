@@ -21,3 +21,5 @@ Under data/obs, find the latest version of on-board survey records "obs_chosenpa
 Notebooks will be converted to scripts in the future, when the process is verified and clean. Currently a script viz_prep
 exists, which will create "path_comparison.csv" with command line arguments. A similar script will combine this script
 with one that produces "chosenpath_links_with_observed.csv".
+
+See also the various subdirectories used to convert raw on-board and household travel survey data into FT format (both input and output files). 
