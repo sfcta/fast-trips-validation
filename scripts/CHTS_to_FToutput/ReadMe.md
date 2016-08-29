@@ -1,4 +1,4 @@
-#####Converts CHTS gps trips data to FT [passenger links](https://github.com/lmz/dyno-path/blob/patch-1/files/links.md) output.
+#####Converts CHTS gps trips data to FT [passenger links](https://github.com/lmz/dyno-path/blob/patch-1/files/links.md) output format.
 
 ---
 ### Assumptions:
