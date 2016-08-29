@@ -1,4 +1,4 @@
-#####Converts On-Board Survey file (OBS) to FT [passenger links](https://github.com/lmz/dyno-path/blob/patch-1/files/links.md) output.
+#####Converts On-Board Survey file (OBS) to FT [passenger links](https://github.com/lmz/dyno-path/blob/patch-1/files/links.md) output format.
 
 ---
 #### Notes:
