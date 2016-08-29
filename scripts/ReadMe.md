@@ -1,4 +1,4 @@
-#####The followings explains the order of running scripts and processing data in order to conduct route choice validation for fast-trips:
+#####The followings explain the order of running scripts and processing data in order to conduct route choice validation for fast-trips:
 
 ---
 ## 1. Translate observed data into inputs to run FT
