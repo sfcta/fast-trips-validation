@@ -4,8 +4,14 @@
 # Writes: OBSdata_wBART_wSFtaz.csv
 ##########################################################################################################
 import pandas as pd
-OBS = pd.read_csv('OBSdata_wBART.csv')
-OBS = OBS.fillna(value='NA')
+OBS = pd.read_csv('OBSdata_wBART.csv',
+                  dtype={"onoff_enter_station":object,
+                         "onoff_exit_station" :object,
+                         "persons"            :object,
+                         "ID"                 :object,
+                         "approximate_age"    :object,
+                         "depart_hour"        :object},
+                  na_values=["missing"])
 TAZ = pd.read_csv('mtcmaz_to_sftaz.csv')
 
 OBS_mrg = pd.merge(OBS,TAZ,how='left',left_on=['orig_maz'],right_on=['MAZ'])
