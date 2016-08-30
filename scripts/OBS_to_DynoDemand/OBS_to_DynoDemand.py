@@ -47,7 +47,7 @@ df = pd.read_csv('OBSdata_wBART_wSFtaz.csv',
 print "Read %d trips" % len(df)
 
 #Removing unnecessary columns
-df = df [['workers','vehicles','ID','access_mode','depart_hour','egress_mode','fare_category','fare_medium','gender','household_income','persons','work_status','approximate_age','tour_purp','path_line_haul','dest_maz','dest_sf_taz','orig_maz','orig_sf_taz']]
+df = df [['workers','vehicles','Unique_ID','ID','access_mode','depart_hour','egress_mode','fare_category','fare_medium','gender','household_income','persons','work_status','approximate_age','tour_purp','path_line_haul','dest_maz','dest_sf_taz','orig_maz','orig_sf_taz']]
 
 # rename
 df.rename(columns={"orig_sf_taz":"o_taz",

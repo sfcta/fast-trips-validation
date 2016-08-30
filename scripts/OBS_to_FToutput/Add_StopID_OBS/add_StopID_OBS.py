@@ -6,8 +6,7 @@
 import pandas as pd
 df = pd.read_csv('OBSdata_wBART_wSFtaz.csv')
 #Removing unnecessary columns
-#df = df.drop(['Unique_ID','survey_year','workers','vehicles','ID','depart_hour','dest_purp','direction','eng_proficient','fare_category','fare_medium','gender','hispanic','household_income','interview_language','onoff_enter_station','onoff_exit_station','orig_purp','persons','return_hour','student_status','survey_type','weekpart','weight','work_status','approximate_age','tour_purp','auto_suff','path_access','path_egress','path_line_haul','path_label','race','language_at_home','day_of_the_week', 'field_start','field_end','day_part','home_maz','school_maz','workplace_maz','dest_taz','home_taz','orig_taz','school_taz','workplace_taz','first_board_tap','last_alight_tap','trip_weight','field_language'],axis=1)
-df = df[['operator','ID','access_mode','egress_mode','route','boardings','survey_tech','first_board_tech','last_alight_tech','transfer_from','transfer_to','first_board_lat','first_board_lon','survey_board_lat','survey_board_lon','survey_alight_lat','survey_alight_lon','last_alight_lat','last_alight_lon','orig_maz','orig_sf_taz','dest_maz','dest_sf_taz']]
+df = df[['operator','Unique_ID','ID','access_mode','egress_mode','route','boardings','survey_tech','first_board_tech','last_alight_tech','transfer_from','transfer_to','first_board_lat','first_board_lon','survey_board_lat','survey_board_lon','survey_alight_lat','survey_alight_lon','last_alight_lat','last_alight_lon','orig_maz','orig_sf_taz','dest_maz','dest_sf_taz']]
 
 stops = pd.read_csv('stops.txt')
 stops = stops.drop(['stop_name','zone_id'],axis=1)
