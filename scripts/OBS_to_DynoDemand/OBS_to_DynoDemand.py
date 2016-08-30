@@ -136,7 +136,8 @@ print "Filtered to %d trips" % len(df)
 
 df["hh_id num"] = df.index + 1
 df["hh_id"] = df["hh_id num"].map(lambda x: "hh%d" % x)
-df["person_id"] = df["ID"]
+df["person_id"] = df["Unique_ID"]
+df["person_trip_id"] = df.index + 1
 
 # write out the relevant columns
 household_df = df[['hh_id','hh_vehicles','hh_income','hh_size','hh_workers']]
@@ -145,7 +146,7 @@ household_df.to_csv("household.txt", index=False)
 persons_df = df[['person_id','hh_id','age','gender','worker_status','transit_pass','disability']]
 persons_df.to_csv("persons.txt", index=False, float_format="%.0f")
 
-trips_df = df[['person_id','o_taz','d_taz','mode','purpose','departure_time','arrival_time','time_target','vot']]
+trips_df = df[['person_id','person_trip_id','o_taz','d_taz','mode','purpose','departure_time','arrival_time','time_target','vot']]
 trips_df.sort_values(by=["person_id"]).to_csv("trip_list.txt", index=False, float_format="%.2f")
 
 print "Done!"

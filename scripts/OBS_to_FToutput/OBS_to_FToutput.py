@@ -30,15 +30,15 @@ print 'Main'
 k=0   #link_num indicator
 for i in range(len(df)):
     print i
-    per_id = 'hh' + str(i+1) + '_' + str(df.loc[i,'ID'])
-    #per_id = df.loc[i,'person_id']
-    trip_id = i+1
+    #per_id = 'hh' + str(i+1) + '_' + str(df.loc[i,'ID'])
+    per_id = df.loc[i,'Unique_ID']
+    trip_list_id_num = i+1
     
     #Access
     mode = AccEgrs_dict[df.loc[i,'access_mode']] + '_access'
     A_id = df.loc[i,'orig_sf_taz']     #For access links, A_id is a taz     
     B_id = df.loc[i,'first_board_stop']
-    acc_strn = [(per_id, trip_id, 'access', A_id, B_id, 0, mode, '')]
+    acc_strn = [(per_id, trip_list_id_num, 'access', A_id, B_id, 0, mode, '')]
     Output = Output.append(acc_strn)
  
     #No transfer
@@ -47,7 +47,7 @@ for i in range(len(df)):
         route = df.loc[i,'operator'] + '_' + str(df.loc[i,'route'])
         A_id = df.loc[i,'first_board_stop']
         B_id = df.loc[i,'last_alight_stop']
-        trn_strn = [(per_id, trip_id, 'transit', A_id, B_id, 1, mode, route)]
+        trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 1, mode, route)]
         Output = Output.append(trn_strn)
         k=1
              
@@ -58,19 +58,19 @@ for i in range(len(df)):
             route = df.loc[i,'operator'] + '_' + str(df.loc[i,'route'])
             A_id = df.loc[i,'first_board_stop']
             B_id = df.loc[i,'survey_alight_stop']
-            trn_strn = [(per_id, trip_id, 'transit', A_id, B_id, 1, mode, route)]
+            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 1, mode, route)]
             Output = Output.append(trn_strn)
         
             A_id = df.loc[i,'survey_alight_stop']
             B_id = ''
-            xfer_strn = [(per_id, trip_id, 'transfer', A_id, B_id, 2, 'transfer', '')]
+            xfer_strn = [(per_id, trip_list_id_num, 'transfer', A_id, B_id, 2, 'transfer', '')]
             Output = Output.append(xfer_strn)
         
             mode = transit_dict[str(df.loc[i,'last_alight_tech'])]
             route = df.loc[i,'transfer_to']  #not a route, just agency
             A_id = ''  
             B_id = df.loc[i,'last_alight_stop']
-            trn_strn = [(per_id, trip_id, 'transit', A_id, B_id, 3, mode, route)]
+            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, route)]
             Output = Output.append(trn_strn)
             k=3
         
@@ -80,19 +80,19 @@ for i in range(len(df)):
             route = df.loc[i,'transfer_from']  #not a route, just agency
             A_id = df.loc[i,'first_board_stop']
             B_id = ''  
-            trn_strn = [(per_id, trip_id, 'transit', A_id, B_id, 1, mode, route)]
+            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 1, mode, route)]
             Output = Output.append(trn_strn)
         
             A_id = ''  
             B_id = df.loc[i,'survey_board_stop']
-            xfer_strn = [(per_id, trip_id, 'transfer', A_id, B_id, 2, 'transfer', '')]
+            xfer_strn = [(per_id, trip_list_id_num, 'transfer', A_id, B_id, 2, 'transfer', '')]
             Output = Output.append(xfer_strn)
         
             mode = transit_dict[str(df.loc[i,'last_alight_tech'])]
             route = df.loc[i,'operator'] + '_' + str(df.loc[i,'route'])
             A_id = df.loc[i,'survey_board_stop']
             B_id = df.loc[i,'last_alight_stop']
-            trn_strn = [(per_id, trip_id, 'transit', A_id, B_id, 3, mode, route)]
+            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, route)]
             Output = Output.append(trn_strn)
             k=3
                         
@@ -102,31 +102,31 @@ for i in range(len(df)):
         route = df.loc[i,'transfer_from']  #not a route, just agency
         A_id = df.loc[i,'first_board_stop']
         B_id = ''  
-        trn_strn = [(per_id, trip_id, 'transit', A_id, B_id, 1, mode, route)]
+        trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 1, mode, route)]
         Output = Output.append(trn_strn)
         
         A_id = ''  
         B_id = df.loc[i,'survey_board_stop']
-        xfer_strn = [(per_id, trip_id, 'transfer', A_id, B_id, 2, 'transfer', '')]
+        xfer_strn = [(per_id, trip_list_id_num, 'transfer', A_id, B_id, 2, 'transfer', '')]
         Output = Output.append(xfer_strn)
         
         mode = transit_dict[str(df.loc[i,'survey_tech'])]
         route = df.loc[i,'operator'] + '_' + str(df.loc[i,'route']) 
         A_id = df.loc[i,'survey_board_stop']
         B_id = df.loc[i,'survey_alight_stop']  
-        trn_strn = [(per_id, trip_id, 'transit', A_id, B_id, 3, mode, route)]
+        trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, route)]
         Output = Output.append(trn_strn)
         
         A_id = df.loc[i,'survey_alight_stop']    
         B_id = ''
-        xfer_strn = [(per_id, trip_id, 'transfer', A_id, B_id, 4, 'transfer', '')]
+        xfer_strn = [(per_id, trip_list_id_num, 'transfer', A_id, B_id, 4, 'transfer', '')]
         Output = Output.append(xfer_strn)
         
         mode = transit_dict[str(df.loc[i,'last_alight_tech'])]
         route = df.loc[i,'transfer_to']  #not a route, just agency
         A_id = ''
         B_id = df.loc[i,'last_alight_stop']  #For egress links, B_id is a taz
-        trn_strn = [(per_id, trip_id, 'transit', A_id, B_id, 5, mode, route)]
+        trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 5, mode, route)]
         Output = Output.append(trn_strn)
         k=5
         
@@ -134,7 +134,7 @@ for i in range(len(df)):
     mode = AccEgrs_dict[df.loc[i,'egress_mode']] + '_egress'
     A_id = df.loc[i,'last_alight_stop']
     B_id = df.loc[i,'dest_sf_taz']
-    egr_strn = [(per_id, trip_id, 'egress', A_id, B_id, str(k+1), mode, '')]
+    egr_strn = [(per_id, trip_list_id_num, 'egress', A_id, B_id, str(k+1), mode, '')]
     Output = Output.append(egr_strn)
     
 df = df.fillna(value='')
