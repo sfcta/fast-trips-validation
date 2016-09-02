@@ -86,6 +86,8 @@ df.loc[df["fare_category"]=="disabled", "disability"] = "unknown disability"
 
 #### remap purpose
 df["purpose"] = df["tour_purp"].replace(purp_dict)
+# set unknown purpose to "other"
+df["purpose"].fillna("other", inplace=True)
 
 #### clean access and egress modes
 # assume walk for missing
