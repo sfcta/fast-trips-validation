@@ -7,6 +7,7 @@
 if %USERNAME%==lzorn (
   set OBS_RAW_FILE=M:\Data\OnBoard\Data and Reports\_data Standardized\share_data\survey.csv
   set MTCMAZ_TO_SFTAZ_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\4-Transit Rider Behavior\mtcmaz_to_sftaz.csv
+  set NETWORK_DIR=C:\Users\lzorn\Box Sync\SHRP C-10\2-Network Supply\sfcta\network_draft1.8
   set CODE_DIR=C:\Users\lzorn\Documents\fast-trips-validation
 )
 
@@ -32,7 +33,7 @@ python "%CODE_DIR%\scripts\OBS_to_DynoDemand\OBS_to_DynoDemand.py"
 :: Add the stop ID
 ::  Reads: OBSdata_wBART_wSFtaz.csv, stops.txt
 :: Writes: OBSdata_wBART_wSFtaz_wStops.csv
-python "%CODE_DIR%\scripts\OBS_to_FToutput\Add_StopID_OBS\add_StopID_OBS.py"
+python "%CODE_DIR%\scripts\OBS_to_FToutput\Add_StopID_OBS\add_StopID_OBS.py" "%NETWORK_DIR%"
 
 :: Create the dyno-path version of the On Board Survey
 ::  Reads: OBSdata_wBART_wSFtaz_wStops.csv
