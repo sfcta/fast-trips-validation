@@ -1,6 +1,6 @@
 ######################################################################################################
 # Finds corresponding stop_id's for boarding/alighting locations in OBS file by matching stops' lat/long
-# Reads: OBSdata_wBART_wSFtaz.csv, GTFS Plus network
+# Reads: OBSdata_wBART_wSFtaz.csv, GTFS Plus network, OBS_GTFS_route_dict.xlsx
 # Writes: OBSdata_wBART_wSFtaz_wStops.csv
 #######################################################################################################
 import pandas as pd
@@ -27,6 +27,12 @@ OBS_OPERATOR_TO_NETWORK_SERVICE = {
     "Union City"                    :"union_city_transit_weekday",
     "Petaluma"                      :"petaluma_weekday"
 }
+
+# Creating route dictionary from OBS to GTFS-1.8 route
+route_bridge = pd.read_excel('OBS_GTFS_route_dict.xlsx','Sheet1')
+route_bridge.index = route_bridge.OBS_route
+route_bridge = route_bridge.drop('OBS_route',axis=1)
+OBS_ROUTE_TO_GTFS_ROUTE = route_bridge.to_dict()['GTFS1.8_route']
 
 def get_closest_stop(person_trips_df, vehicle_stops_df, person_prefix):
     """
@@ -96,10 +102,10 @@ if __name__ == "__main__":
 
     # Read the observed person trips file
     df = pd.read_csv('OBSdata_wBART_wSFtaz.csv')
-    original_columns = [
+    # Keep only the columns we're interested
+	df = df[[
         'operator',
         'Unique_ID',
-        'ID',
         'access_mode',
         'egress_mode',
         'route',
@@ -123,11 +129,15 @@ if __name__ == "__main__":
         'dest_sf_taz',
         'day_part',
         'onoff_enter_station',
-        'onoff_exit_station']
-    # Keep only the columns we're interested
-    df = df[original_columns]
+        'onoff_exit_station'
+		]]
     # Add the service_id to match the network data
     df["service_id"] = df["operator"].replace(OBS_OPERATOR_TO_NETWORK_SERVICE)
+	# Add the route_id to match the network data
+	df["route"] = df["operator"] + '_' + df["route"] #route dict reads data in the [operator]_[route] format
+	df["route_id"] = df["route"].replace(OBS_ROUTE_TO_GTFS_ROUTE)
+	df["route_id"].fillna("none", inplace=True)
+	
     # This will print a few lines into the log so the columns are clear
     fasttrips.FastTripsLogger.info("observed person trips=\n%s" % str(df.head()))
     # These are the operators
@@ -135,8 +145,13 @@ if __name__ == "__main__":
 
     # ===========================================================
     # process one operator at a time, for memory reasons and debugging
+    
+    Locations = ['first_board','survey_board','survey_alight','last_alight']
+    survey_board_stops = pd.DataFrame()
+    survey_alight_stops = pd.DataFrame()
+    first_board_stops = pd.DataFrame()
+    last_alight_stops = pd.DataFrame()
 
-    new_df = pd.DataFrame()
     df_operators_series = df["operator"].value_counts()
     for operator in df_operators_series.keys():
 
@@ -150,38 +165,51 @@ if __name__ == "__main__":
         fasttrips.FastTripsLogger.info("service_vehicle_trips=\n%s" % str(service_vehicle_trips.head()))
         fasttrips.FastTripsLogger.info("service_person_trips=\n%s" % str(service_person_trips.head()))
 
-        # For now, process just those operators for whom we join on service only and not route
-        #
-        # TODO:
-        # for other operators, we probably want to join using Elizabeth's route bridge, so join on both service_id and route_id
-        # so that the stops are specific to the service + route
-        if operator != "BART" and operator != "Caltrain": continue
+        # For BART and Caltrain, and also those where route_id is missing, we join on service_id only and not route_id,
+        # for other operators, we join on both service_id and route_id, so that the stops are specific to the service + route.
+        if operator == "BART" or operator == "Caltrain":
 
-        # first collect unique stops for the operator
-        service_unique_vehicle_stops = service_vehicle_trips[["service_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
-        fasttrips.FastTripsLogger.info("service_unique_vehicle_stops (%d)=\n%s" % (len(service_unique_vehicle_stops), str(service_unique_vehicle_stops)))
+			# first collect unique stops for the operator
+			service_unique_vehicle_stops = service_vehicle_trips[["service_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
+            for i in Locations:
+				# add columns: [location]_stop_id  [location]_stop_name  [location]_stop_lat  [location]_stop_lon
+				stops = get_closest_stop(service_person_trips, service_unique_vehicle_stops, i)
+				stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon']]
+				# creates individual [location] dataframes to be joined with df later.
+				# this prevents removing records where stops' lat/lon exist for one [Location] and not for the other.
+				if   i=='survey_board'  : survey_board_stops  = survey_board_stops.append(stops, ignore_index=True)
+				elif i=='survey_alight' : survey_alight_stops = survey_alight_stops.append(stops, ignore_index=True)
+				elif i=='first_board'   : first_board_stops   = first_board_stops.append(stops, ignore_index=True)
+				else                    : last_alight_stops   = last_alight_stops.append(stops, ignore_index=True)
 
-        # add columns: survey_board_stop_id  survey_board_stop_name  survey_board_stop_lat  survey_board_stop_lon  survey_board_stop_dist
-        service_person_trips = get_closest_stop(service_person_trips, service_unique_vehicle_stops, "survey_board")
-
-        # add columns: survey_alight_stop_id survey_alight_stop_name  survey_alight_stop_lat  survey_alight_stop_lon  survey_alight_stop_dist
-        service_person_trips = get_closest_stop(service_person_trips, service_unique_vehicle_stops, "survey_alight")
-
-        fasttrips.FastTripsLogger.info("service_person_trips = \n%s" % str(service_person_trips.head()))
-
+        else:
+			service_unique_vehicle_stops = service_vehicle_trips[["route_id","service_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
+			for i in Locations:
+				stops = get_closest_stop(service_person_trips, service_unique_vehicle_stops, i)
+				stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon']]
+				if   i=='survey_board'  : survey_board_stops  = survey_board_stops.append(stops, ignore_index=True)
+				elif i=='survey_alight' : survey_alight_stops = survey_alight_stops.append(stops, ignore_index=True)
+				elif i=='first_board'   : first_board_stops   = first_board_stops.append(stops, ignore_index=True)
+				else                    : last_alight_stops   = last_alight_stops.append(stops, ignore_index=True)
+    
+			# those not BART or Caltrain, but w/ missing route_id
+			service_unique_vehicle_stops = service_vehicle_trips[["service_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
+			service_person_trips = service_person_trips.loc[service_person_trips['route_id']=='none']
+			for i in Locations:
+				stops = get_closest_stop(service_person_trips, service_unique_vehicle_stops, i)
+				stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon']]
+				if   i=='survey_board'  : survey_board_stops  = survey_board_stops.append(stops, ignore_index=True)
+				elif i=='survey_alight' : survey_alight_stops = survey_alight_stops.append(stops, ignore_index=True)
+				elif i=='first_board'   : first_board_stops   = first_board_stops.append(stops, ignore_index=True)
+				else                    : last_alight_stops   = last_alight_stops.append(stops, ignore_index=True)
+        
         # TODO: guess stop IDs for first_board and last_alight, looking at the first_board_tech and last_alight_tech?
 
-        # put this operator's rows into the new dataframe
-        if len(new_df) == 0:
-            new_df = service_person_trips
-        else:
-            new_df = new_df.append(service_person_trips, ignore_index=True)
-
-    # this is really to assert column order
-    all_columns = original_columns
-    all_columns.extend(["survey_board_stop_id",  "survey_board_stop_name", "survey_board_stop_lat", "survey_board_stop_lon", "survey_board_stop_dist",
-                        "survey_alight_stop_id", "survey_alight_stop_name","survey_alight_stop_lat","survey_alight_stop_lon","survey_alight_stop_dist"])
-
-    new_df = new_df[all_columns]
-
+    # Put all stop_id info into the dataframe
+	new_df = df
+	new_df = pd.merge (new_df, survey_board_stops,  how='left', on='Unique_ID')
+	new_df = pd.merge (new_df, survey_alight_stops, how='left', on='Unique_ID')
+	new_df = pd.merge (new_df, first_board_stops,   how='left', on='Unique_ID')
+	new_df = pd.merge (new_df, last_alight_stops,   how='left', on='Unique_ID')
+ 
     new_df.to_csv("OBSdata_wBART_wSFtaz_wStops.csv", index=False)
