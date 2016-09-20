@@ -86,7 +86,9 @@ for p in persons:
                 access = 1
                 mode = AccEgrs_dict[str(df.loc[i-1,'travel_mode'])] + '_access'
                 A_id = 'redacted'
+                # TODO: A_id = df.loc[i-1,'origin_sftaz']
                 B_id = 'redacted'
+                # TODO: B_id = df.loc[i-1,'destination_stop_id']
                 A_time = df.loc[i-1,'start_time'].split(' ')[1] + ':00'
                 B_time = df.loc[i-1,'end_time'].split(' ')[1] + ':00'
                 linktime = df.loc[i-1,'time2']-df.loc[i-1,'time1']   #df.loc[i-1,'duration_min']
@@ -101,7 +103,9 @@ for p in persons:
             #Transit (first transit link)
             mode = transit_dict[str(df.loc[i,'travel_mode'])]
             A_id = 'redacted'
+            # TODO: A_id = df.loc[i,'origin_stop_id']
             B_id = 'redacted'
+            # TODO: B_id = df.loc[i,'destination_stop_id']
             if (i>0) and (access==1):
                 A_time = df.loc[i-1,'end_time'].split(' ')[1] + ':00'
                 wait = df.loc[i,'time1']-df.loc[i-1,'time2']   #df.loc[i-1,'gaptime']
@@ -131,7 +135,9 @@ for p in persons:
                     #transit link
                     mode = transit_dict[str(df.loc[i,'travel_mode'])]
                     A_id = 'redacted'
+                    # TODO: A_id = df.loc[i,'origin_stop_id']
                     B_id = 'redacted'
+                    # TODO: B_id = df.loc[i,'destination_stop_id']
                     A_time = df.loc[i-1,'end_time'].split(' ')[1] + ':00'
                     B_time = df.loc[i,'end_time'].split(' ')[1] + ':00'
                     linktime = df.loc[i,'time2']-df.loc[i,'time1']   #df.loc[i,'duration_min']
@@ -146,7 +152,9 @@ for p in persons:
                 elif (df.loc[i,'per_id']==p) and (df.loc[i+1,'per_id']==p) and (i<len(df)-1) and (df.loc[i,'travel_mode'] in AccEgrs) and (df.loc[i+1,'travel_mode'] in transit) and (0 <= df.loc[i+1,'time1']-df.loc[i,'time2'] <= max_xfer_wait):
                     #transfer link
                     A_id = 'redacted'
+                    # TODO: A_id = df.loc[i,'origin_stop_id']
                     B_id = 'redacted'
+                    # TODO: B_id = df.loc[i,'destination_stop_id']
                     A_time = df.loc[i,'start_time'].split(' ')[1] + ':00'
                     B_time = df.loc[i,'end_time'].split(' ')[1] + ':00'
                     linktime = df.loc[i,'time2']-df.loc[i,'time1']   #df.loc[i,'duration_min']
@@ -159,7 +167,9 @@ for p in persons:
                     #transit link
                     mode = transit_dict[str(df.loc[i,'travel_mode'])]
                     A_id = 'redacted'
+                    # TODO: A_id = df.loc[i,'origin_stop_id']
                     B_id = 'redacted'
+                    # TODO: B_id = df.loc[i,'destination_stop_id']
                     A_time = df.loc[i-1,'end_time'].split(' ')[1] + ':00'
                     B_time = df.loc[i,'end_time'].split(' ')[1] + ':00'
                     linktime = df.loc[i,'time2']-df.loc[i-1,'time2']   #df.loc[i,'duration_min']
@@ -181,7 +191,9 @@ for p in persons:
             if (df.loc[i,'per_id']==p) and (df.loc[i,'travel_mode'] in AccEgrs) and (0 <= df.loc[i,'time1']-df.loc[i-1,'time2'] <= max_egr_time):
                 mode = AccEgrs_dict[str(df.loc[i,'travel_mode'])] + '_egress'
                 A_id = 'redacted'
+                # TODO: A_id = df.loc[i,'origin_stop_id']
                 B_id = 'redacted'
+                # TODO: B_id = df.loc[i,'destination_SFtaz']
                 A_time = df.loc[i,'start_time'].split(' ')[1] + ':00'
                 B_time = df.loc[i,'end_time'].split(' ')[1] + ':00'
                 linktime = df.loc[i,'time2']-df.loc[i,'time1']   #df.loc[i,'duration_min']
