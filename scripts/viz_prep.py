@@ -11,14 +11,17 @@ USAGE = """
 """
 
 # Parameters
-# ==================================================
+# ===================================================
+# Probability threshold for observed paths 
+# e.g. are observed paths assigned above/below this value by fast-trips?
+threshold = 0.3
 non_transit_modes = ['transfer','walk_access','walk_egress','bike_access','bike_egress',
                      'PNR_access','PNR_egress','KNR_access','KNR_egress']
-# Probability threshold for observed paths (are observed paths assigned above/below this value by fast-trips)
-threshold = 0.3
+
+
 
 # Script
-# =================================================
+# ===================================================
 
 def append(*args):
     '''Union dataframes with similar structures'''
@@ -51,14 +54,14 @@ def select_common_records(df1,df2,field):
 
 def add_transit_agency(df, routes):
 
-	df = pd.merge(left=df,right=routes[['route_id','agency_id']],on='route_id',how='left')
-	
-	df['agency'] = df['agency_id']
-	df.drop('agency_id',axis=1)
-	df.fillna("",inplace=True)
-	df.reset_index(inplace=True)
+    df = pd.merge(left=df,right=routes[['route_id','agency_id']],on='route_id',how='left')
+    
+    df['agency'] = df['agency_id']
+    df.drop('agency_id',axis=1)
+    df.fillna("",inplace=True)
+    df.reset_index(inplace=True)
 
-	return df
+    return df
 
 def produce_path_fields(df, group):
     '''
@@ -68,9 +71,9 @@ def produce_path_fields(df, group):
     # create "path_routes"
 
     for field in ['route_id','mode','agency','A_id','B_id']:
-    	df[field] = df[field].astype('str')
-    	df[field] = df[field].fillna("")
-    	df[field] = df[field].replace('nan',"")
+        df[field] = df[field].astype('str')
+        df[field] = df[field].fillna("")
+        df[field] = df[field].replace('nan',"")
 
     df['path_routes'] = df['route_id'].apply(lambda x: x.strip())
     path_routes = pd.DataFrame(df.groupby(group)['path_routes'].apply(lambda x: "%s" % ' '.join(x).strip()))
@@ -107,7 +110,7 @@ if __name__ == "__main__":
     OUTPUT_DIR = sys.argv[2]
 
     # Load data
-    #######################
+    # ===================================================
 
     # NOTE: this should be taken from a FT network standard in probably
     routes = pd.read_csv(r'../data/gtfs/routes.txt')
@@ -115,7 +118,7 @@ if __name__ == "__main__":
     # Load observed and chosenpath_links; add new field designating 'model' or 'observed'
     obs = load_df(data=observed_records, unique_fields=['person_id','trip_list_id_num'], record_type='observed', )
     chosenpath_links = load_df(data=OUTPUT_DIR + r'\chosenpaths_links.csv', 
-    	unique_fields=['person_id','trip_list_id_num'], record_type='model', )
+        unique_fields=['person_id','trip_list_id_num'], record_type='model', )
     # Only load the final iteration
     chosenpath_links = chosenpath_links[chosenpath_links['iteration'] == chosenpath_links['iteration'].max()]
 
@@ -126,60 +129,34 @@ if __name__ == "__main__":
     pathset_paths = load_df(OUTPUT_DIR + r'\pathset_paths.csv', unique_fields=['person_id','trip_list_id_num'])
 
     # Clean data
-    #########################
-    # pathset_paths.to_csv('test_pathset_paths.csv')
-    # pathset_links.to_csv('test_pathset_links.csv')
-    # obs.to_csv('test_obs.csv')
+    # ===================================================
 
-   	# Create a stacked csv of observed trip links & model chosenpath_links; export for Tableau
+    # Create a stacked csv of observed trip links & model chosenpath_links; export for Tableau
     chosenpath_links, obs = select_common_records(chosenpath_links, obs,'person_id')
     append(chosenpath_links, obs).to_csv(OUTPUT_DIR + '/' + 'chosenpaths_links_with_observed.csv',index=False)
 
     # Add transit agency field to chosenpath_links and pathset_links, based on route_id
     chosenpath_links = add_transit_agency(df=chosenpath_links, routes=routes)
     pathset_links = add_transit_agency(df=pathset_links, routes=routes)
-
-    # chosenpath_links.to_csv('test_chosenpath_links.csv')
-    pathset_links.to_csv('test_pathset_links.csv')
-    # obs.to_csv('test_obs.csv')
-
    
-    ## Potentially some extra cleanup req'd here
-    ##
-    ##
-
-    
     # Analyze data
-    ## 
-    # obs.to_csv('test_obs.csv')
+    # ===================================================
+    
     # Produce concatenated path represenations for routes, modes, transit agencies
     observed_path = produce_path_fields(obs, group=['unique_id'])
     modeled_path = produce_path_fields(chosenpath_links, group=['unique_id'])
 
-
     # concat the detailed pathset_links files, so each path in the pathset has a unique trip identity
-    new_pathset = produce_path_fields(pathset_links, group=['unique_id','pathnum'])
+    pathset_links = produce_path_fields(pathset_links, group=['unique_id','pathnum'])
     
 
-    # Make sure we only evaluate the overlapping records
-    obs = obs[obs['unique_id'].isin(new_pathset['unique_id'].values)]
-    pathset_links = pathset_links[pathset_links['unique_id'].isin(new_pathset['unique_id'].values)]
-    new_pathset = new_pathset[new_pathset['unique_id'].isin(obs['unique_id'].values)]
-    new_pathset = new_pathset[new_pathset['unique_id'].isin(pathset_links['unique_id'].values)]
+    # Make sure we only evaluate records that have unique_ids in common
+    obs = obs[obs['unique_id'].isin(pathset_links['unique_id'].values)]
+    pathset_links = pathset_links[pathset_links['unique_id'].isin(obs['unique_id'].values)]
 
-    new_pathset.to_csv('new_pathset_test.csv')
-	# Compare if modeled/observed trips match, completed or partially
-	# Join the observed and modeled fields
+    # Compare if modeled/observed trips match, completed or partially
+    # Join the observed and modeled fields
     df = pd.merge(observed_path, modeled_path, on='unique_id',suffixes=("_observed","_model"))
-
-    # Find rows with matching path routes
-    complete_route_match = df[df['path_routes_observed'] == df['path_routes_model']]
-    print len(complete_route_match)
-    complete_mode_match = df[df['path_modes_observed'] == df['path_modes_model']]
-    print len(complete_mode_match)
-    # Add complete_agency_match when available
-    complete_agency_match = df[df['path_agencies_observed'] == df['path_agencies_model']]
-    print len(complete_mode_match)
 
     # Extract order of transit routes taken
     df['model_path_route_list'] = df['path_routes_model'].apply(lambda x: x.split(" "))
@@ -193,13 +170,13 @@ if __name__ == "__main__":
 
 
     # Isolate transit modes only, because all trips should have walk & transfer components
-    
     df['model_transit_modes'] = df['model_path_mode_list'].apply(
         lambda row: [element for element in row if element not in non_transit_modes])
     df['obs_transit_modes'] = df['obs_path_mode_list'].apply(
         lambda row: [element for element in row if element not in non_transit_modes])
 
     # Find the intersection between the chosen model/observed paths using different criteria
+    # ===================================================
 
     # transit route IDs only
     df.apply(lambda row: all(i in row['model_path_route_list'] for i in row['obs_path_route_list']), axis=1)
@@ -211,48 +188,61 @@ if __name__ == "__main__":
 
     # Transit modes only (type of vehicle taken and number of boardings)
     df.apply(lambda row: all(i in row['model_path_mode_list'] for i in row['obs_path_mode_list']), axis=1)
-    df['transit_modes_intersection'] = [list(set(a).intersection(set(b))) for a, b in zip(df['model_path_mode_list'], df['obs_path_mode_list'])]
+    df['transit_modes_intersection'] = [list(set(a).intersection(set(b))) for a, b in zip(df['model_transit_modes'], df['obs_transit_modes'])]
 
     # Agency Intersection
     df.apply(lambda row: all(i in row['model_path_agencies_list'] for i in row['obs_path_agencies_list']), axis=1)
     df['transit_agencies_intersection'] = \
         [list(set(a).intersection(set(b))) for a, b in zip(df['model_path_agencies_list'], 
-        	df['obs_path_agencies_list'])]
+            df['obs_path_agencies_list'])]
 
-    # Exact Match of path routes, modes, & components
+    # ===================================================
+    # Find exact matches of routes, modes, and agencies between model and observed
+    
+    complete_route_match = df[df['path_routes_observed'] == df['path_routes_model']]
+    complete_mode_match = df[df['path_modes_observed'] == df['path_modes_model']]
+    complete_agency_match = df[df['path_agencies_observed'] == df['path_agencies_model']]
+    
+    # Add fields indicating complete match with 1
     complete_mode_match['complete_mode_match'] = 1
     complete_agency_match['complete_agency_match'] = 1
-
-    df = pd.merge(df, complete_mode_match[['unique_id','complete_mode_match']], how='left', on='unique_id')
-    df['complete_mode_match'].fillna(0,inplace=True)
-
     complete_route_match['complete_route_match'] = 1
-    df = pd.merge(df, complete_route_match[['unique_id','complete_route_match']], how='left', on='unique_id')
 
-    complete_agency_match['complete_agency_match'] = 1
+    # Add new columns to the larger dataframe indicating complete match
+    df = pd.merge(df, complete_mode_match[['unique_id','complete_mode_match']], how='left', on='unique_id')
+    df = pd.merge(df, complete_route_match[['unique_id','complete_route_match']], how='left', on='unique_id')
     df = pd.merge(df, complete_agency_match[['unique_id','complete_agency_match']], how='left', on='unique_id')
 
-    df['complete_route_match'] = df['complete_route_match'].replace('nan',0)
-    df['complete_agency_match'] = df['complete_agency_match'].replace('nan',0)
+    # For fields without complete match, fill with 0
+    for field in ['mode','route','agency']:
+        df['complete_'+field+'_match']=  df['complete_'+field+'_match'].replace('nan',0)
 
-    # Now we find the percent of trips with matching routes or partial matching routes
+    # Find % of trips with matching routes/modes/agencies, or partial matches
 
     # Join the filtered data to the original results
+    df['common_route_count'] = [len(row) for row in df['routes_intersection']]
     df['common_mode_count'] = [len(row) for row in df['all_modes_intersection']]
     df['common_transit_mode_count'] = [len(row) for row in df['transit_modes_intersection']]
 
-    # How many rows have at least one mode in common?
+    # Do the fields have at least 1 component in common? 1 if yes, 0 if no
     df['partial_mode_match'] = [1 if row > 0 else 0 for row in df['common_mode_count']]
     df['partial_transit_mode_match'] = [1 if row > 0 else 0 for row in df['common_transit_mode_count']]
+    df['partial_route_match'] = [1 if row > 0 else 0 for row in df['common_route_count']]
+
+    # Export results of these comparisons
+    df.to_csv(OUTPUT_DIR + '\path_intersection.csv', index=False)
+
 
     # Check if path is in pathset
+    # ==========================================================
+
     ## Add a field to the new_pathset that lists the pathnum
-    new_pathset['pathnum'] = new_pathset.index.get_level_values(1)
+    pathset_links['pathnum'] = pathset_links.index.get_level_values(1)
 
     # for path modes only
-    df = pd.merge(observed_path, new_pathset, how='left',
+    df = pd.merge(observed_path, pathset_links, how='left',
               left_on=['unique_id','path_modes'],right_on=['unique_id','path_modes'], suffixes=['_obs','_pathset'])
-    new_pathset.to_csv('test_new_pathset.csv')
+    pathset_links.to_csv('test_pathset_links.csv')
 
     df['path_modes_obs'] = df['path_modes']
     df.drop('path_modes',axis=1, inplace=True)
@@ -281,11 +271,11 @@ if __name__ == "__main__":
 
     # Mark no_match_records
     try:
-	    prob_export.ix[prob_export['max_prob'] >= threshold, 'above_threshold'] = 1
-	    prob_export.ix[prob_export['max_prob'] < threshold, 'above_threshold'] = 0
-	    prob_export.ix[prob_export['max_prob'] == 'no_match', 'above_threshold'] = -1
+        prob_export.ix[prob_export['max_prob'] >= threshold, 'above_threshold'] = 1
+        prob_export.ix[prob_export['max_prob'] < threshold, 'above_threshold'] = 0
+        prob_export.ix[prob_export['max_prob'] == 'no_match', 'above_threshold'] = -1
     except:
-	    pass
+        pass
 
     # Join relevant columns and export
     prob_export['unique_id'] = prob_export.index
