@@ -246,38 +246,36 @@ if __name__ == "__main__":
     ## Add a field to the new_pathset that lists the pathnum
     pathset_links['pathnum'] = pathset_links.index.get_level_values(1)
 
-    # compare paths based on comparison_field, defined in script header
-
+	# Join paths based on comparison_field, as defined in script header
+	# Resulting df is merge of all observed paths that have a corresponding path in the pathset for their unique_id
+	# observed paths with no corresponding path in pathset will have NaN for fields "_pathset" suffix
     df = pd.merge(observed_path, pathset_links, how='left',
-              left_on=['unique_id',comparison_field],right_on=['unique_id',comparison_field], suffixes=['_obs','_pathset'])
-    pathset_links.to_csv('test_pathset_links.csv')
+          left_on=['unique_id',comparison_field],right_on=['unique_id',comparison_field], suffixes=['_obs','_pathset'])
 
-    df[comparison_field + '_obs'] = df[comparison_field]
-    df.drop(comparison_field, axis=1, inplace=True)
+	# Join this data with the pathset path file to get pf_probability associated with the observed path
+    newdf = pd.merge(df, pathset_paths[['unique_id','pathnum','pf_probability']], 
+	                 left_on=['unique_id','pathnum'], right_on=['unique_id','pathnum'],
+	                 how='left')
 
-    df = (pd.merge(df, modeled_path[['unique_id',comparison_field]], how='left'))
-    df[comparison_field + '_pathset'] = df[comparison_field]
-    df.drop(comparison_field, axis=1, inplace=True)
+	# Fields with NaN marked as no match since no matching path was found in pathset
+    newdf['probability'] = newdf['pf_probability'].fillna('no_match')
 
-    df['pathnum'] = df['pathnum'].fillna(0)
-    df['pathnum'] = df['pathnum'].astype('int')
-
-    newdf = pd.merge(df, pathset_paths, left_on=['unique_id','pathnum'], right_on=['unique_id','pathnum'])
-    newdf['probability'] = newdf['probability'].fillna('no_match')
-
-    newdf.to_csv('test_newdf.csv')
-
+	# Grab the highest and lowest probabilities from pathset paths
+	# want to test that the observed path has a reasonably high probability
     max_prob = newdf.groupby('unique_id').max()['probability']
     min_prob = newdf.groupby('unique_id').min()['probability']
 
+	# Reshape those results and export to dataframe
     prob_export = pd.DataFrame([max_prob,min_prob]).T
     prob_export.columns = ['max_prob','min_prob']
 
-    # Pull binary data for each person
+
+	# Reformat at binary to indicate whether a path was found in the pathset
     prob_export['path_exists'] = prob_export['max_prob'].apply(lambda row_value: 0 if row_value == 'no_match' else 1)
     prob_export.to_csv('temp_prob_export.csv')
 
-    # Mark no_match_records
+	# Create a variabale to indicate if the max probability of the observed path
+	# is over a given threshold, as defined at top of script
     try:
 	    prob_export.ix[prob_export['max_prob'] >= threshold, 'above_threshold'] = 1
 	    prob_export.ix[prob_export['max_prob'] < threshold, 'above_threshold'] = 0
@@ -285,12 +283,14 @@ if __name__ == "__main__":
     except:
 	    pass
 
-    # Join relevant columns and export
+	# export the results probabilities, path_existence, threshold data,
+	# also add the modeled and observed (chosen) path characteristics
     prob_export['unique_id'] = prob_export.index
-    export_df = pd.merge(df, prob_export, on='unique_id')
+
+    tempdf = pd.merge(observed_path,modeled_path,on='unique_id',suffixes=['_obs','_model'],how='left')
+    export_df = pd.merge(prob_export,tempdf,on='unique_id',how='left')
+
     export_df['person_id'] = export_df['unique_id'].apply(lambda row: row.split("_")[0])
     export_df['trip_list_id_num'] = export_df['unique_id'].apply(lambda row: row.split("_")[-1])
 
     export_df.to_csv(OUTPUT_DIR + '\path_comparison.csv', index=False)
-
-    print "Script complete, output stored in: %s" % OUTPUT_DIR
