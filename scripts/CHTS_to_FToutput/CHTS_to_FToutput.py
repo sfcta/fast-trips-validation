@@ -22,7 +22,7 @@ max_xfer_wait = 20  #may be increased if found that the location is not changed 
 max_egr_time = 2
 				
 Output = pd.DataFrame()
-cols = ['person_id','trip_list_id_num','linkmode','A_lat','A_lon','B_lat','B_lon','travel_date','new_A_time','new_B_time','new_linktime min','new_waittime min','board_time','alight_time','linknum','mode','mode_no']
+cols = ['person_id','trip_list_id_num','linkmode','A_lat','A_lon','B_lat','B_lon','travel_date','new_A_time','new_B_time','new_linktime min','new_waittime min','board_time','alight_time','linknum','mode','transit_mode_no']
 df = pd.read_csv('w_gpstrips.csv')
 
 #################################### Preparation ####################################
@@ -75,7 +75,7 @@ for p in PrsTrp:
             if (i>0) and (df.loc[i-1,'travel_mode'] in AccEgrs) and (0 <= df.loc[i,'time1']-df.loc[i-1,'time2'] <= max_init_wait):
                 access = 1
                 mode = AccEgrs_dict[str(df.loc[i-1,'travel_mode'])] + '_access'
-                mode_no = df.loc[i-1,'travel_mode']
+                mode_no = '' #df.loc[i-1,'travel_mode']
                 A_lat = df.loc[i-1,'origin_lat']
                 A_lon = df.loc[i-1,'origin_lon']
                 # TODO: Find A_id = origin_sftaz for A
@@ -194,7 +194,7 @@ for p in PrsTrp:
         
             if (df.loc[i,'prs_trp_id']==p) and (df.loc[i,'travel_mode'] in AccEgrs) and (0 <= df.loc[i,'time1']-df.loc[i-1,'time2'] <= max_egr_time):
                 mode = AccEgrs_dict[str(df.loc[i,'travel_mode'])] + '_egress'
-                mode_no = df.loc[i,'travel_mode']
+                mode_no = '' #df.loc[i,'travel_mode']
                 A_lat = df.loc[i,'origin_lat']
                 A_lon = df.loc[i,'origin_lon']
                 # TODO: Find A_id = origin_stop_id for A
