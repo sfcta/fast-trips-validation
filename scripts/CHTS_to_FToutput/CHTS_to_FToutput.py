@@ -6,13 +6,16 @@
 import pandas as pd
 import numpy as np
 
-transit = [11,15,16,17,19,20,22,23,24,25,26,27,29]
+# Do not include paratransit (21)
 AccEgrs = [1,2,3,4,5,6,7,8,9,10]
-transit_dict = {'11':'employer_shuttle', '15':'local_bus', '16':'premium_bus', '17':'heavy_rail', 
-                '19':'open_shuttle', '20':'open_shuttle', '22':'local_bus', '23':'transit', '24':'heavy_rail', 
-                '25':'inter_regional_rail', '26':'light_rail', '27':'street_car', '29':'ferry'}
 AccEgrs_dict = {'1':'walk', '2':'bike', '3':'walk', '4':'walk', '5':'PNR', '6':'KNR', '7':'KNR',
                 '8':'PNR', '9':'KNR', '10':'PNR'}
+#Do not include: private transit/shuttles (11,14), Greyhound (12), Plane(13), LA metro lines (17), School bus (18), Amtrak bus(22)
+transit = [15,16,19,20,23,24,25,26,27,29]
+transit_dict = {'15':'local_bus', '16':'premium_bus', '19':'open_shuttle', '20':'open_shuttle', 
+                '23':'transit', '24':'heavy_rail', '25':'commuter_rail', '26':'light_rail', 
+                '27':'street_car', '29':'ferry'}
+
 max_walk_time = 50  #access/egress walk
 max_init_wait = 30
 max_xfer_wait = 20  #may be increased if found that the location is not changed and for some reason the person has just been waiting in the stop.
