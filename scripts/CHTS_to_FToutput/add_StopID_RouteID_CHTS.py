@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # Read CHTS observed person trips file
     df = pd.read_csv('CHTS_FToutput.csv')
     # Add operator_type to CHTS
-    df["operator_type"] = df["mode_no"].replace(CHTS_MODE_TO_OPERATOR_TYPE)
+    df["operator_type"] = df["transit_mode_no"].replace(CHTS_MODE_TO_OPERATOR_TYPE)
     # Add Unique_ID to be used for merging later on
     df['Unique_ID'] = df.index
     
