@@ -3,7 +3,7 @@ import fasttrips
 NETWORK_DIR = r"R:\FastTrips\FT Repo\network_draft1.8"
 
 # bridge from CHTS travel_mode => operator_type
-CHTS_MODE_TO_OPERATOR = {
+CHTS_MODE_TO_OPERATOR_TYPE = {
     15 : "Local_bus/Rapid_bus",
     16 : "GoldenGate/AC_transit",
     19 : None,
