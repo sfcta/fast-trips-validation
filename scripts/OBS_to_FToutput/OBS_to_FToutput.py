@@ -60,7 +60,7 @@ agency_dict = {
     }
 	
 Output = pd.DataFrame()
-cols = ['person_id','trip_list_id_num','linkmode','A_id_num','B_id_num','linknum','mode','route_id','agency']
+cols = ['person_id','trip_list_id_num','linkmode','A_id','B_id','linknum','mode','route_id','agency']
 
 df = pd.read_csv('OBSdata_wBART_wSFtaz_wStops.csv')
 
