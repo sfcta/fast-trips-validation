@@ -196,6 +196,11 @@ for i in range(len(df)):
     Output = Output.append(egr_strn)
     
 Output.columns = cols
+#For BART, Caltrain and MUNI that route_id's are not known, put agency as route_id 
+Output.loc[ Output["agency"] == "bart",     "route_id"] = "bart_unknown"
+Output.loc[ Output["agency"] == "caltrain", "route_id"] = "caltrain_unknown"
+Output.loc[ Output["agency"] == "sf_muni",  "route_id"] = "sf_muni_unknown"
+
 Output.to_csv('OBS_FToutput.csv',index=False)
 
 print "Done!"
