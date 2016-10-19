@@ -38,7 +38,6 @@ NETWORK_AGENCY_TO_OPERATOR_TYPE = {
     "ferry"                 :"Ferry",
     "sf_muni"               :"sf_muni"
 }
-
 '''
 # bridge from stop_id to taz_id
 taz_dict = pd.read_excel('stops.xlsx','Sheet1')
@@ -46,6 +45,8 @@ taz_dict.index = taz_dict.stop_id
 taz_dict = taz_dict.drop('stop_id',axis=1)
 STOPS_TO_SFTAZ = taz_dict.to_dict()['zone_id']
 '''
+muni_operations = ["Local_bus/Rapid_bus", "MuniMetro/VTA", "Street_car/Cable_car"]
+max_dist = 0.2 # max ditance for stop_id matching based on stops' lat/lon
 
 def get_closest_stop(person_trips_df, vehicle_stops_df, location_prefix):
     # join the person trips with the stops
@@ -55,8 +56,8 @@ def get_closest_stop(person_trips_df, vehicle_stops_df, location_prefix):
 
     # calculate the distance from [location_prefix]_lat, [location_prefix]_lon, and the stop
     fasttrips.Util.calculate_distance_miles(person_trips_by_stops_df,
-                                            origin_lat="%s_lat" % location_prefix, origin_lon="%s_lon" % person_prefix,
-                                            destination_lat="stop_lat",          destination_lon="stop_lon",
+                                            origin_lat="%s_lat" % location_prefix, origin_lon="%s_lon" % location_prefix,
+                                            destination_lat="stop_lat",            destination_lon="stop_lon",
                                             distance_colname="%s_stop_dist" % location_prefix)
 
     # get the closest stop
@@ -66,7 +67,8 @@ def get_closest_stop(person_trips_df, vehicle_stops_df, location_prefix):
     person_trips_df.rename(columns={"stop_id"  :"%s_stop_id"   % location_prefix,
                                     "stop_name":"%s_stop_name" % location_prefix,
                                     "stop_lat" :"%s_stop_lat"  % location_prefix,
-                                    "stop_lon" :"%s_stop_lon"  % location_prefix
+                                    "stop_lon" :"%s_stop_lon"  % location_prefix,
+                                    "stop_dist":"%s_stop_dist" % location_prefix,
                                     "route_id" :"%s_route_id"  % location_prefix}, inplace=True)
     return person_trips_df
 
@@ -79,12 +81,12 @@ if __name__ == "__main__":
     # Get the full (joined) transit vehicle trip table and add lat/lon for the stops
     full_trips_df = ft.trips.get_full_trips()
     full_trips_df = ft.stops.add_stop_lat_lon(full_trips_df, id_colname="stop_id", new_lat_colname="stop_lat", new_lon_colname="stop_lon", new_stop_name_colname="stop_name")
-    # Add operator_type to match with CHTS file
+    # Add operator_type as the mutual field between CHTS and GTFS vehicle trips
     full_trips_df["operator_type"] = full_trips_df["agency_id"].replace(NETWORK_AGENCY_TO_OPERATOR_TYPE)
 
     # Read CHTS observed person trips file
     df = pd.read_csv('CHTS_FToutput.csv')
-    # Add operator_type to CHTS
+    # Add operator_type as the mutual field between CHTS and GTFS vehicle trips
     df["operator_type"] = df["transit_mode_no"].replace(CHTS_MODE_TO_OPERATOR_TYPE)
     # Add Unique_ID to be used for merging later on
     df['Unique_ID'] = df.index
@@ -96,33 +98,41 @@ if __name__ == "__main__":
     df_operator_type_series = df["operator_type"].value_counts()
     for OPtype in df_operator_type_series.keys():
         service_vehicle_trips = full_trips_df.loc[ full_trips_df["operator_type"] == OPtype ]
-        service_person_trips  = df.loc[df["operator_type"] == OPtype]
+        # sf_muni has 3 different operation types: local bus, light rail and streetcar, 
+        # So, whenever we are processing one of these operator types, we have to add sf_muni to service_vehicle_trips separately.
+        if OPtype in muni_operations:
+            muni_vehicle_trips = full_trips_df.loc[ full_trips_df["operator_type"] == 'sf_muni' ]
+            # rename 'sf_muni' operator_type to OPtype being processed to be matchable with service_person_trips
+            muni_vehicle_trips["operator_type"] = OPtype
+            # add sf_muni trips to service_vehicle_trips
+            service_vehicle_trips = service_vehicle_trips.append(muni_vehicle_trips)
+        service_person_trips  = df.loc[ df["operator_type"] == OPtype ]
     
         print OPtype
         service_unique_vehicle_stops = service_vehicle_trips[["operator_type","route_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
         for i in Locations:
             stops = get_closest_stop(service_person_trips, service_unique_vehicle_stops, i)
+            stops = stops [ stops[i+'_stop_dist'] < max_dist ]
             stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon', i+'_route_id']]
             if   i=='A'  : A_stops  = A_stops.append(stops, ignore_index=True)
             else         : B_stops  = B_stops.append(stops, ignore_index=True)
-
+'''
     # sf_muni has 3 different operation types: local bus, light rail and streetcar. So we have to process it separately
     print 'sf_muni'
     service_vehicle_trips = full_trips_df.loc[ full_trips_df["operator_type"] == 'sf_muni' ]
-    # Choose service_person_trips with operator_types "Local_bus/Rapid_bus" or "MuniMetro/VTA", 
+    # Choose service_person_trips with operator_types of "Local_bus/Rapid_bus", "MuniMetro/VTA" or "Street_car/Cable_car", 
     # and rename them to 'sf_muni' to match with service_vehicle_trips
     service_person_trips = df.loc[ (df["operator_type"] == "Local_bus/Rapid_bus") & (df["operator_type"] == "MuniMetro/VTA") & (df["operator_type"] == "Street_car/Cable_car")]
-    service_person_trips[ service_person_trips["operator_type"]=="Local_bus/Rapid_bus", "operator_type" ] = 'sf_muni'
-    service_person_trips[ service_person_trips["operator_type"]=="MuniMetro/VTA", "operator_type" ] = 'sf_muni'
-    service_person_trips[ service_person_trips["operator_type"]=="Street_car/Cable_car", "operator_type" ] = 'sf_muni'
+    service_person_trips[ service_person_trips["operator_type"] == "Local_bus/Rapid_bus" , "operator_type" ] = 'sf_muni'
+    service_person_trips[ service_person_trips["operator_type"] == "MuniMetro/VTA"       , "operator_type" ] = 'sf_muni'
+    service_person_trips[ service_person_trips["operator_type"] == "Street_car/Cable_car", "operator_type" ] = 'sf_muni'
     service_unique_vehicle_stops = service_vehicle_trips[["operator_type","route_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
     for i in Locations:
         stops = get_closest_stop(service_person_trips, service_unique_vehicle_stops, i)
         stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon', i+'_route_id']]
         if   i=='A'  : A_stops  = A_stops.append(stops, ignore_index=True)
         else         : B_stops  = B_stops.append(stops, ignore_index=True)
-
-
+'''
     # Put all stop_id and route_id info into the original CHTS dataframe
     new_df = df
     new_df = pd.merge (new_df, A_stops, how='left', on='Unique_ID')
@@ -135,7 +145,6 @@ if __name__ == "__main__":
     new_df['B_id'] = None
     new_df['B_id'] = new_df['B_stop_id'].replace(STOPS_TO_SFTAZ)
     new_df.loc [ df['linkmode']!='egress', 'B_id' ] = new_df['B_stop_id']
-    '''
-    
+    '''    
     new_df.to_csv("CHTS_FToutput_wStops_wRoutes.csv", index=False)
     print 'Done'
