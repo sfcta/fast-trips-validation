@@ -211,7 +211,7 @@ for p in PrsTrp:
                 i=i+1
             else:
                 #Generating a virtual egress link
-				A_time = df.loc[i-1,'end'] + ':00'
+                A_time = df.loc[i-1,'end'] + ':00'
                 linknum = k
                 k = k+1
                 egr_strn = [(per_id, trip_id, 'egress', '', '', '', '', date, A_time, '', '', '', '', '', linknum, '', '')]
