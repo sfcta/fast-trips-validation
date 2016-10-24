@@ -92,7 +92,7 @@ df["purpose"].fillna("other", inplace=True)
 #### clean access and egress modes
 # assume walk for missing
 df["access_mode"].fillna("walk", inplace=True)
-df["egress_mode"].fillna("egress", inplace=True)
+df["egress_mode"].fillna("walk", inplace=True)
 # capitalize knr, pnr and call "." walk
 df["access_mode"] = df["access_mode"].replace(AccEgrs_dict)
 df["egress_mode"] = df["egress_mode"].replace(AccEgrs_dict)
