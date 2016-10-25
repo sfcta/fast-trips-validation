@@ -23,6 +23,7 @@ agency_dict = {
     "GOLDEN GATE FERRY"             :"ferry",
     "GOLDEN GATE TRANSIT"           :"golden_gate_transit",
     "MUNI"                          :"sf_muni",
+    "SF Muni Early Tranche"         :"sf_muni",
     "Napa Vine"                     :"vine",
     "NAPA VINE"                     :"vine",
     "Petaluma"                      :"petaluma",

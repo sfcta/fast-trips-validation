@@ -13,6 +13,7 @@ OBS_OPERATOR_TO_NETWORK_SERVICE = {
     "AC Transit"                    :"ac_transit_weekday",
     "Caltrain"                      :"caltrain_weekday",
     "SamTrans"                      :"samtrans_weekday",
+    "SF Muni Early Tranche"         :"sf_muni_weekday",
     "SF Muni Pilot"                 :"sf_muni_weekday",
     "Tri-Delta"                     :"tri_delta_transit_weekday",
     "Golden Gate Transit (bus)"     :"golden_gate_transit_weekday",
