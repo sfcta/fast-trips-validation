@@ -7,7 +7,8 @@
 if %USERNAME%==lzorn (
   set OBS_RAW_FILE=M:\Data\OnBoard\Data and Reports\_data Standardized\share_data\survey.csv
   set MTCMAZ_TO_SFTAZ_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\4-Transit Rider Behavior\mtcmaz_to_sftaz.csv
-  set NETWORK_DIR=C:\Users\lzorn\Box Sync\SHRP C-10\2-Network Supply\sfcta\network_draft1.8
+  set OBS_GTFS_ROUTE_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\4-Transit Rider Behavior\OBS_GTFS_route_dict.xlsx
+  set NETWORK_DIR=C:\Users\lzorn\Box Sync\SHRP C-10\2-Network Supply\sfcta\network_draft1.9
   set CODE_DIR=C:\Users\lzorn\Documents\fast-trips-validation
 )
 
@@ -15,6 +16,8 @@ if %USERNAME%==lzorn (
 copy "%OBS_RAW_FILE%" OBSdata_wBART.csv
 :: copy the MTC MAZ to SFCTA TAZ mapping into place
 copy "%MTCMAZ_TO_SFTAZ_FILE%" .
+:: copy the OBS to GTFS route dictionary into place
+copy "%OBS_GTFS_ROUTE_FILE%" .
 
 
 :: ===================== fasttrips input (Dyno-Demand) ==================================================================

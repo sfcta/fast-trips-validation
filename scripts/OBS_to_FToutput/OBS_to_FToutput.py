@@ -58,7 +58,7 @@ agency_dict = {
     "RIO-VISTA"                     :"EXTERNAL",
     "SAN JOAQUIN TRANSIT"           :"EXTERNAL"
     }
-	
+    
 Output = pd.DataFrame()
 cols = ['person_id','trip_list_id_num','linkmode','A_id','B_id','linknum','mode','route_id','agency']
 
@@ -82,9 +82,12 @@ df = df[df.boardings <= 3]  #Removes trips with more than 2 transfers
 df = df.reset_index(drop=True)
 
 print 'Main'
+print "Processing row %6d" % 0,
 k=0   #link_num indicator
 for i in range(len(df)):
-    print i
+    if (i % 100) == 0:
+        print "\b\b\b\b\b\b\b%6d" % i,
+
     per_id = df.loc[i,'Unique_ID']
     trip_list_id_num = i+1
     
@@ -98,7 +101,7 @@ for i in range(len(df)):
     #No transfer
     if (df.loc[i,'boardings']==1):
         mode = transit_dict[df.loc[i,'survey_tech']]
-		agency = agency_dict[df.loc[i,'operator']]
+        agency = agency_dict[df.loc[i,'operator']]
         route_id = df.loc[i,'route_id']
         A_id = df.loc[i,'first_board_stop_id']
         B_id = df.loc[i,'last_alight_stop_id']
@@ -110,7 +113,7 @@ for i in range(len(df)):
     elif (df.loc[i,'boardings']==2):
         if (df.loc[i,'transfer_from']=='None'):  #first leg being surveyed
             mode = transit_dict[df.loc[i,'first_board_tech']]
-			agency = agency_dict[df.loc[i,'operator']]
+            agency = agency_dict[df.loc[i,'operator']]
             route_id = df.loc[i,'route_id']
             A_id = df.loc[i,'first_board_stop_id']
             B_id = df.loc[i,'survey_alight_stop_id']
@@ -146,10 +149,10 @@ for i in range(len(df)):
         
             mode = transit_dict[df.loc[i,'last_alight_tech']]
             agency = agency_dict[df.loc[i,'operator']]
-			route_id = df.loc[i,'route_id']
+            route_id = df.loc[i,'route_id']
             A_id = df.loc[i,'survey_board_stop_id']
             B_id = df.loc[i,'last_alight_stop_id']
-            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, route_is, agency)]
+            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, route_id, agency)]
             Output = Output.append(trn_strn)
             k=3
                         
@@ -169,7 +172,7 @@ for i in range(len(df)):
         
         mode = transit_dict[df.loc[i,'survey_tech']]
         agency = agency_dict[df.loc[i,'operator']]
-		route_id = df.loc[i,'route_id']
+        route_id = df.loc[i,'route_id']
         A_id = df.loc[i,'survey_board_stop_id']
         B_id = df.loc[i,'survey_alight_stop_id']  
         trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, route_id, agency)]
