@@ -39,6 +39,6 @@ python "%CODE_DIR%\scripts\OBS_to_DynoDemand\OBS_to_DynoDemand.py"
 python "%CODE_DIR%\scripts\OBS_to_FToutput\Add_StopID_OBS\add_StopID_OBS.py" "%NETWORK_DIR%"
 
 :: Create the dyno-path version of the On Board Survey
-::  Reads: OBSdata_wBART_wSFtaz_wStops.csv
-:: Writes: OBS_FToutput.csv
+::  Reads: trip_list.txt, OBSdata_wBART_wSFtaz_wStops.csv
+:: Writes: OBS_FToutput_links.csv
 python "%CODE_DIR%\scripts\OBS_to_FToutput\OBS_to_FToutput.py"
