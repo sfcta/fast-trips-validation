@@ -4,7 +4,7 @@
 # Writes: household.txt, person.txt, trip_list.txt
 ##########################################################################################################
 import pandas as pd
-import os,sys
+import os,string,sys
 from util_functions import *
 
 pd.set_option('display.width', 300)
@@ -57,6 +57,11 @@ df.rename(columns={"orig_sf_taz":"o_taz",
 df["hh_vehicles"] = df["vehicles"].replace(Num_dict)
 
 #### Pick midpoint for household income (keep as string)
+# handle commas or none
+for inc_range in Inc_dict.keys():
+      inc_value = Inc_dict[inc_range]
+      inc_range = string.replace(inc_range, ",", "")
+      Inc_dict[inc_range] = inc_value
 df["hh_income"] = df["household_income"].replace(Inc_dict)
 df["hh_income_float"] = pd.to_numeric(df["hh_income"])
 
