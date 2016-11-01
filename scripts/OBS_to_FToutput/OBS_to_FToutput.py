@@ -17,7 +17,8 @@ df = pd.read_csv('OBSdata_wBART_wSFtaz_wStops.csv',
                         "survey_alight_stop_id"      :object,
                         "survey_alight_stop_sequence":object, # treat as string
                         "first_board_stop_id"        :object,
-                        "last_alight_stop_id"        :object},
+                        "last_alight_stop_id"        :object,
+                        "trip_id"                    :object},
                  na_values=["None"])
 
 trip_list_df = pd.read_csv('trip_list.txt',sep=',',
