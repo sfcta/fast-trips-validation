@@ -128,6 +128,7 @@ if __name__ == "__main__":
         'dest_maz',
         'dest_sf_taz',
         'day_part',
+        'weekpart',
         'onoff_enter_station',
         'onoff_exit_station'
 		]]
