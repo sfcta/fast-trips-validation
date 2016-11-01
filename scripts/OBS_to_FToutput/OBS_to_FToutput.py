@@ -52,6 +52,15 @@ print " => dropping %d" % df["remove"].sum()
 df = df.loc[df["remove"] == False]
 print "  Have %6d rows" % len(df)
 
+print "Removing trips without an orig_sf_taz or dest_sf_taz",
+df.loc[ pd.isnull(df["orig_sf_taz"])|pd.isnull(df["dest_sf_taz"]), "remove"] = True
+print " => dropping %d" % df["remove"].sum()
+df = df.loc[df["remove"] == False]
+print "  Have %6d rows" % len(df)
+# now these can be int columns
+df["orig_sf_taz"] = df["orig_sf_taz"].astype(int)
+df["dest_sf_taz"] = df["dest_sf_taz"].astype(int)
+
 # get person_trip_id,time_target, and mode from trip_list
 df = pd.merge(left     =df,
               right    =trip_list_df[["person_id","person_trip_id","time_target","mode"]],
@@ -76,7 +85,7 @@ print 'Converting to links'
 # access -- everyone has this
 access_df    = df.copy()
 access_df["linkmode"  ] = "access"
-access_df["A_id"      ] = access_df["orig_sf_taz"]
+access_df["A_id"      ] = access_df["orig_sf_taz"].apply(str)
 access_df["A_seq"     ] = ""
 access_df["B_id"      ] = access_df["first_board_stop_id"]
 access_df["B_seq"     ] = ""
@@ -166,7 +175,7 @@ egress_df    = df.copy()
 egress_df["linkmode"  ] = "egress"
 egress_df["A_id"      ] = egress_df["last_alight_stop_id"]
 egress_df["A_seq"     ] = ""
-egress_df["B_id"      ] = egress_df["dest_sf_taz"]
+egress_df["B_id"      ] = egress_df["dest_sf_taz"].apply(str)
 egress_df["B_seq"     ] = ""
 egress_df["mode"      ] = egress_df["egress_mode"] + "_egress"
 egress_df["route_id"  ] = ""
