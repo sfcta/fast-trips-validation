@@ -24,6 +24,9 @@ df = pd.read_csv('OBSdata_wBART_wSFtaz_wStops.csv',
 trip_list_df = pd.read_csv('trip_list.txt',sep=',',
                            dtype={"person_trip_id":object})
 
+# Remove weekend trips
+df = df[ df['weekpart']=='WEEKDAY' ]
+
 # assume walk for missing access/egress mode
 df['access_mode'].fillna('walk', inplace=True)
 df['egress_mode'].fillna('egress', inplace=True)
