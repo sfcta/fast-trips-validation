@@ -12,10 +12,12 @@ AccEgrs_dict = {'bike':'bike', 'pnr':'PNR', 'knr':'KNR', '.':'walk'}
 
 # stop ids are strings, not floats
 df = pd.read_csv('OBSdata_wBART_wSFtaz_wStops.csv',
-                 dtype={"survey_board_stop_id" :object,
-                        "survey_alight_stop_id":object,
-                        "first_board_stop_id"  :object,
-                        "last_alight_stop_id"  :object},
+                 dtype={"survey_board_stop_id"       :object,
+                        "survey_board_stop_sequence" :object, # treat as string
+                        "survey_alight_stop_id"      :object,
+                        "survey_alight_stop_sequence":object, # treat as string
+                        "first_board_stop_id"        :object,
+                        "last_alight_stop_id"        :object},
                  na_values=["None"])
 
 trip_list_df = pd.read_csv('trip_list.txt',sep=',',
@@ -74,7 +76,9 @@ print 'Converting to links'
 access_df    = df.copy()
 access_df["linkmode"  ] = "access"
 access_df["A_id"      ] = access_df["orig_sf_taz"]
+access_df["A_seq"     ] = ""
 access_df["B_id"      ] = access_df["first_board_stop_id"]
+access_df["B_seq"     ] = ""
 access_df["mode"      ] = access_df["access_mode"] + "_access"
 access_df["route_id"  ] = ""
 access_df["trip_id"   ] = ""
@@ -86,7 +90,9 @@ access_df["linknum"   ] = 0
 transit_prev_df  = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_from"]) ].copy()
 transit_prev_df["linkmode"  ] = "transit"
 transit_prev_df["A_id"      ] = transit_prev_df["first_board_stop_id"]
+transit_prev_df["A_seq"     ] = ""
 transit_prev_df["B_id"      ] = "" # don't know
+transit_prev_df["B_seq"     ] = ""
 transit_prev_df["mode"      ] = transit_prev_df["first_board_mode"]
 transit_prev_df["route_id"  ] = "" # don't know
 transit_prev_df["trip_id"   ] = ""
@@ -97,7 +103,9 @@ transit_prev_df["linknum"   ] = 1
 transfer_prev_df = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_from"]) ].copy()
 transfer_prev_df["linkmode"  ] = "transfer"
 transfer_prev_df["A_id"      ] = "" # don't know
+transfer_prev_df["A_seq"     ] = ""
 transfer_prev_df["B_id"      ] = transfer_prev_df["survey_board_stop_id" ]
+transfer_prev_df["B_seq"     ] = ""
 transfer_prev_df["mode"      ] = "transfer"
 transfer_prev_df["route_id"  ] = "" # none
 transfer_prev_df["trip_id"   ] = "" # none
@@ -109,7 +117,9 @@ transfer_prev_df["linknum"   ] = 2
 transit_df  = df.copy()
 transit_df["linkmode"] = "transit"
 transit_df["A_id"    ] = transit_df["survey_board_stop_id" ]
+transit_df["A_seq"   ] = transit_df["survey_board_stop_sequence"]
 transit_df["B_id"    ] = transit_df["survey_alight_stop_id"]
+transit_df["B_seq"   ] = transit_df["survey_alight_stop_sequence"]
 transit_df["mode"    ] = transit_df["survey_mode"]
 # transit_df["route_id"  ] set already
 # transit_df["trip_id"   ] set already
@@ -126,7 +136,9 @@ transit_df.loc[(transit_df["boardings"] >1)&pd.notnull(transit_df["transfer_from
 transfer_next_df = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_to"]) ].copy()
 transfer_next_df["linkmode"  ] = "transfer"
 transfer_next_df["A_id"      ] = transfer_next_df["survey_alight_stop_id"]
+transfer_next_df["A_seq"     ] = ""
 transfer_next_df["B_id"      ] = "" # don't know
+transfer_next_df["B_seq"     ] = ""
 transfer_next_df["mode"      ] = "transfer"
 transfer_next_df["route_id"  ] = "" # none
 transfer_next_df["trip_id"   ] = "" # none
@@ -138,7 +150,9 @@ transfer_next_df["linknum"   ] = transfer_next_df["boardings"]*2-2
 transit_next_df  = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_to"]) ].copy()
 transit_next_df["linkmode"  ] = "transit"
 transit_next_df["A_id"      ] = "" # don't know
+transit_next_df["A_seq"     ] = ""
 transit_next_df["B_id"      ] = transit_next_df["last_alight_stop_id"]
+transit_next_df["B_seq"     ] = ""
 transit_next_df["mode"      ] = transit_next_df["last_alight_mode"]
 transit_next_df["route_id"  ] = "" # don't know
 transit_next_df["trip_id"   ] = "" # don't know
@@ -150,7 +164,9 @@ transit_next_df["linknum"   ] = transit_next_df["boardings"]*2-1
 egress_df    = df.copy()
 egress_df["linkmode"  ] = "egress"
 egress_df["A_id"      ] = egress_df["last_alight_stop_id"]
+egress_df["A_seq"     ] = ""
 egress_df["B_id"      ] = egress_df["dest_sf_taz"]
+egress_df["B_seq"     ] = ""
 egress_df["mode"      ] = egress_df["egress_mode"] + "_egress"
 egress_df["route_id"  ] = ""
 egress_df["trip_id"   ] = ""
@@ -162,7 +178,7 @@ egress_df["linknum"   ] = egress_df["boardings"]*2
 path_links_df = pd.concat([access_df, transit_prev_df, transfer_prev_df, transit_df, transfer_next_df, transit_next_df, egress_df], axis=0)
 
 # keep only the columns we want and output links
-path_links_df = path_links_df[['person_id','person_trip_id','linkmode','A_id','B_id','linknum','mode','route_id','trip_id','agency_id','service_id']]
+path_links_df = path_links_df[['person_id','person_trip_id','linkmode','A_id','A_seq','B_id','B_seq','linknum','mode','route_id','trip_id','agency_id','service_id']]
 path_links_df.sort_values(by=["person_id","person_trip_id","linknum"], inplace=True)
 
 # write it
