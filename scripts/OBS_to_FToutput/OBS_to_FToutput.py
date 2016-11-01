@@ -1,68 +1,28 @@
 ######################################################################################################
-# Converts OBS to FT passengers links output
-# Reads: OBSdata_wBART_wSFtaz_wStops.csv
-# Writes: OBS_FToutput.csv
+# Converts OBS to dyno-path format (https://github.com/osplanning-data-standards/dyno-path)
+# Reads: OBSdata_wBART_wSFtaz_wStops.csv, trip_list.txt (for person_trip_id)
+# Writes: OBS_FToutput_links.csv
 #######################################################################################################
 import pandas as pd
+import sys
+
+pd.set_option('display.width', 300)
 
 AccEgrs_dict = {'bike':'bike', 'pnr':'PNR', 'knr':'KNR', '.':'walk'}
-transit_dict = {'commuter rail':'commuter_rail', 'express bus':'express_bus', 'local bus':'local_bus', 
-                'heavy rail':'heavy_rail', 'light rail':'light_rail','ferry':'ferry', 'NA':'transit'}
-agency_dict = {
-    "AC Transit"                    :"ac_transit",
-    "AC TRANSIT"                    :"ac_transit",
-    "ACE"                           :"ace",
-    "AMTRAK"                        :"amtrak",
-    "BART"                          :"bart",
-    "Caltrain"                      :"caltrain",
-    "CALTRAIN"                      :"caltrain",
-    "County Connection"             :"cccta",
-    "COUNTY CONNECTION"             :"cccta",
-    "Golden Gate Transit (bus)"     :"golden_gate_transit",
-    "Golden Gate Transit (ferry)"   :"ferry",
-    "GOLDEN GATE FERRY"             :"ferry",
-    "GOLDEN GATE TRANSIT"           :"golden_gate_transit",
-    "MUNI"                          :"sf_muni",
-    "Napa Vine"                     :"vine",
-    "NAPA VINE"                     :"vine",
-    "Petaluma"                      :"petaluma",
-    "PETALUMA TRANSIT"              :"petaluma",
-    "SamTrans"                      :"samtrans",
-    "SAMTRANS"                      :"samtrans",
-    "SANTA ROSA CITY BUS"           :"santa_rosa",
-    "SANTA ROSA CITYBUS"            :"santa_rosa",
-    "Santa Rosa CityBus"            :"santa_rosa",
-    "BLUE & GOLD FERRY"             :"ferry",
-    "SF Bay Ferry"                  :"ferry",
-    "SF BAY FERRY"                  :"ferry",
-    "SOLTRANS"                      :"soltrans",
-    "Sonoma County"                 :"sonoma_county_transit",
-    "SONOMA COUNTY TRANSIT"         :"sonoma_county_transit",
-    "Tri-Delta"                     :"tri_delta_transit",
-    "TRI-DELTA"                     :"tri_delta_transit",
-    "Union City"                    :"union_city_transit",
-    "UNION CITY"                    :"union_city_transit",
-    "LAVTA"                         :"lavta",
-    "VTA"                           :"scvta",
-    "WESTCAT"                       :"westcat",
-    "WHEELS (LAVTA)"                :"lavta",
-    "DUMBARTON EXPRESS"             :"UNMODELED",
-    "EMERY-GO-ROUND"                :"UNMODELED",
-    "FAIRFIELD-SUISUN"              :"UNMODELED",
-    "STANFORD SHUTTLES"             :"UNMODELED",
-    "VALLEJO TRANSIT"               :"UNMODELED",
-    "MARIN TRANSIT"                 :"UNMODELED",
-    "PRIVATE SHUTTLE"               :"UNMODELED",
-    "OTHER"                         :"UNMODELED",
-    "MODESTO TRANSIT"               :"EXTERNAL",
-    "RIO-VISTA"                     :"EXTERNAL",
-    "SAN JOAQUIN TRANSIT"           :"EXTERNAL"
-    }
-	
-Output = pd.DataFrame()
-cols = ['person_id','trip_list_id_num','linkmode','A_id','B_id','linknum','mode','route_id','agency']
 
-df = pd.read_csv('OBSdata_wBART_wSFtaz_wStops.csv')
+# stop ids are strings, not floats
+df = pd.read_csv('OBSdata_wBART_wSFtaz_wStops.csv',
+                 dtype={"survey_board_stop_id"       :object,
+                        "survey_board_stop_sequence" :object, # treat as string
+                        "survey_alight_stop_id"      :object,
+                        "survey_alight_stop_sequence":object, # treat as string
+                        "first_board_stop_id"        :object,
+                        "last_alight_stop_id"        :object,
+                        "trip_id"                    :object},
+                 na_values=["None"])
+
+trip_list_df = pd.read_csv('trip_list.txt',sep=',',
+                           dtype={"person_trip_id":object})
 
 # Remove weekend trips
 df = df[ df['weekpart']=='WEEKDAY' ]
@@ -74,136 +34,172 @@ df['access_mode'] = df['access_mode'].replace(AccEgrs_dict)
 df['egress_mode'] = df['egress_mode'].replace(AccEgrs_dict)
 
 print 'Preparation'
-#Removing 3-leg trips where either first or last leg was surveyed
-for i in range(len(df)):
-    if (df.loc[i,'boardings']==3):
-        if (df.loc[i,'transfer_from']=='None') or (df.loc[i,'transfer_to']=='None'):
-            df2 = df.drop([i])
-            df = df2
+print "  Have %6d rows" % len(df)
 
-df = df[df.boardings <= 3]  #Removes trips with more than 2 transfers 
-df = df.reset_index(drop=True)
+print "Removing 3-leg trips where either first or last leg was surveyed",
+df["remove"] = False
+df.loc[ (df["boardings"]==3)&(pd.isnull(df["transfer_from"])|pd.isnull(df["transfer_to"])), "remove"] = True
+print " => dropping %d" % df["remove"].sum()
+df = df.loc[df["remove"] == False]
+print "  Have %6d rows" % len(df)
 
-print 'Main'
-k=0   #link_num indicator
-for i in range(len(df)):
-    print i
-    per_id = df.loc[i,'Unique_ID']
-    trip_list_id_num = i+1
-    
-    #Access
-    mode = df.loc[i,'access_mode'] + '_access'
-    A_id = df.loc[i,'orig_sf_taz']     #For access links, A_id is a taz     
-    B_id = df.loc[i,'first_board_stop_id']
-    acc_strn = [(per_id, trip_list_id_num, 'access', A_id, B_id, 0, mode, '', '')]
-    Output = Output.append(acc_strn)
- 
-    #No transfer
-    if (df.loc[i,'boardings']==1):
-        mode = transit_dict[df.loc[i,'survey_tech']]
-		agency = agency_dict[df.loc[i,'operator']]
-        route_id = df.loc[i,'route_id']
-        A_id = df.loc[i,'first_board_stop_id']
-        B_id = df.loc[i,'last_alight_stop_id']
-        trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 1, mode, route_id, agency)]
-        Output = Output.append(trn_strn)
-        k=1
-             
-    #One transfer
-    elif (df.loc[i,'boardings']==2):
-        if (df.loc[i,'transfer_from']=='None'):  #first leg being surveyed
-            mode = transit_dict[df.loc[i,'first_board_tech']]
-			agency = agency_dict[df.loc[i,'operator']]
-            route_id = df.loc[i,'route_id']
-            A_id = df.loc[i,'first_board_stop_id']
-            B_id = df.loc[i,'survey_alight_stop_id']
-            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 1, mode, route_id, agency)]
-            Output = Output.append(trn_strn)
-        
-            A_id = df.loc[i,'survey_alight_stop_id']
-            B_id = ''
-            xfer_strn = [(per_id, trip_list_id_num, 'transfer', A_id, B_id, 2, 'transfer', '', '')]
-            Output = Output.append(xfer_strn)
-        
-            mode = transit_dict[df.loc[i,'last_alight_tech']]
-            agency = agency_dict[df.loc[i,'transfer_to']]
-            A_id = ''  
-            B_id = df.loc[i,'last_alight_stop_id']
-            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, '', agency)]
-            Output = Output.append(trn_strn)
-            k=3
-        
-        else:  #last leg being surveyed
-        #elif (df.loc[i,'transfer_to']=='None'):  
-            mode = transit_dict[df.loc[i,'first_board_tech']]
-            agency = agency_dict[df.loc[i,'transfer_from']]
-            A_id = df.loc[i,'first_board_stop_id']
-            B_id = ''  
-            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 1, mode, '', agency)]
-            Output = Output.append(trn_strn)
-        
-            A_id = ''  
-            B_id = df.loc[i,'survey_board_stop_id']
-            xfer_strn = [(per_id, trip_list_id_num, 'transfer', A_id, B_id, 2, 'transfer', '', '')]
-            Output = Output.append(xfer_strn)
-        
-            mode = transit_dict[df.loc[i,'last_alight_tech']]
-            agency = agency_dict[df.loc[i,'operator']]
-			route_id = df.loc[i,'route_id']
-            A_id = df.loc[i,'survey_board_stop_id']
-            B_id = df.loc[i,'last_alight_stop_id']
-            trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, route_is, agency)]
-            Output = Output.append(trn_strn)
-            k=3
-                        
-    #Two transfers
-    else:  #3-leg trips (with 2 transfers) where the 2nd leg was surveyed
-        mode = transit_dict[df.loc[i,'first_board_tech']]
-        agency = agency_dict[df.loc[i,'transfer_from']]
-        A_id = df.loc[i,'first_board_stop_id']
-        B_id = ''  
-        trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 1, mode, '', agency)]
-        Output = Output.append(trn_strn)
-        
-        A_id = ''  
-        B_id = df.loc[i,'survey_board_stop_id']
-        xfer_strn = [(per_id, trip_list_id_num, 'transfer', A_id, B_id, 2, 'transfer', '', '')]
-        Output = Output.append(xfer_strn)
-        
-        mode = transit_dict[df.loc[i,'survey_tech']]
-        agency = agency_dict[df.loc[i,'operator']]
-		route_id = df.loc[i,'route_id']
-        A_id = df.loc[i,'survey_board_stop_id']
-        B_id = df.loc[i,'survey_alight_stop_id']  
-        trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 3, mode, route_id, agency)]
-        Output = Output.append(trn_strn)
-        
-        A_id = df.loc[i,'survey_alight_stop_id']    
-        B_id = ''
-        xfer_strn = [(per_id, trip_list_id_num, 'transfer', A_id, B_id, 4, 'transfer', '', '')]
-        Output = Output.append(xfer_strn)
-        
-        mode = transit_dict[df.loc[i,'last_alight_tech']]
-        agency = agency_dict[df.loc[i,'transfer_to']]
-        A_id = ''
-        B_id = df.loc[i,'last_alight_stop_id']  #For egress links, B_id is a taz
-        trn_strn = [(per_id, trip_list_id_num, 'transit', A_id, B_id, 5, mode, '', agency)]
-        Output = Output.append(trn_strn)
-        k=5
-        
-    #Egress
-    mode = df.loc[i,'egress_mode'] + '_egress'
-    A_id = df.loc[i,'last_alight_stop_id']
-    B_id = df.loc[i,'dest_sf_taz']
-    egr_strn = [(per_id, trip_list_id_num, 'egress', A_id, B_id, str(k+1), mode, '', '')]
-    Output = Output.append(egr_strn)
-    
-Output.columns = cols
-#For BART, Caltrain and MUNI that route_id's are not known, put agency as route_id 
-Output.loc[ Output["agency"] == "bart",     "route_id"] = "bart_unknown"
-Output.loc[ Output["agency"] == "caltrain", "route_id"] = "caltrain_unknown"
-Output.loc[ Output["agency"] == "sf_muni",  "route_id"] = "sf_muni_unknown"
+print "Removing trips with more than 3 boardings",
+df.loc[ df["boardings"] > 3, "remove"] = True
+print " => dropping %d" % df["remove"].sum()
+df = df.loc[df["remove"] == False]
+print "  Have %6d rows" % len(df)
 
-Output.to_csv('OBS_FToutput.csv',index=False)
+print "Removing trips with two boarding and unknown transfer",
+df.loc[ (df["boardings"]==2)&pd.isnull(df["transfer_from"])&pd.isnull(df["transfer_to"]), "remove"] = True
+print " => dropping %d" % df["remove"].sum()
+df = df.loc[df["remove"] == False]
+print "  Have %6d rows" % len(df)
 
-print "Done!"
+print "Removing trips without an orig_sf_taz or dest_sf_taz",
+df.loc[ pd.isnull(df["orig_sf_taz"])|pd.isnull(df["dest_sf_taz"]), "remove"] = True
+print " => dropping %d" % df["remove"].sum()
+df = df.loc[df["remove"] == False]
+print "  Have %6d rows" % len(df)
+# now these can be int columns
+df["orig_sf_taz"] = df["orig_sf_taz"].astype(int)
+df["dest_sf_taz"] = df["dest_sf_taz"].astype(int)
+
+# get person_trip_id,time_target, and mode from trip_list
+df = pd.merge(left     =df,
+              right    =trip_list_df[["person_id","person_trip_id","time_target","mode"]],
+              left_on  ="Unique_ID",
+              right_on ="person_id",
+              how      ="left",
+              indicator=True)
+
+print "Removing trips not in trip_list.txt",
+df.loc[ df["_merge"]=="left_only", "remove"] = True
+print " => dropping %d" % df["remove"].sum()
+df = df.loc[df["remove"] == False]
+print "  Have %6d rows" % len(df)
+
+# add dyno-path columns
+df["pathdir"] = 1  # outbound (time_target=arrival)
+df.loc[df["time_target"]=="departure", "pathdir"] = 2 # inbound (time_target=departure)
+df.rename(columns={"mode":"pathmode"}, inplace=True)
+
+print 'Converting to links'
+
+# access -- everyone has this
+access_df    = df.copy()
+access_df["linkmode"  ] = "access"
+access_df["A_id"      ] = access_df["orig_sf_taz"].apply(str)
+access_df["A_seq"     ] = ""
+access_df["B_id"      ] = access_df["first_board_stop_id"]
+access_df["B_seq"     ] = ""
+access_df["mode"      ] = access_df["access_mode"] + "_access"
+access_df["route_id"  ] = ""
+access_df["trip_id"   ] = ""
+access_df["service_id"] = ""
+access_df["agency_id" ] = ""
+access_df["linknum"   ] = 0
+
+# previous leg -- only if boardings > 1 and transfer_from
+transit_prev_df  = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_from"]) ].copy()
+transit_prev_df["linkmode"  ] = "transit"
+transit_prev_df["A_id"      ] = transit_prev_df["first_board_stop_id"]
+transit_prev_df["A_seq"     ] = ""
+transit_prev_df["B_id"      ] = "" # don't know
+transit_prev_df["B_seq"     ] = ""
+transit_prev_df["mode"      ] = transit_prev_df["first_board_mode"]
+transit_prev_df["route_id"  ] = "" # don't know
+transit_prev_df["trip_id"   ] = ""
+transit_prev_df["agency_id" ] = transit_prev_df["agency_id transfer_from"]
+transit_prev_df["service_id"] = transit_prev_df["service_id transfer_from"]
+transit_prev_df["linknum"   ] = 1
+
+transfer_prev_df = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_from"]) ].copy()
+transfer_prev_df["linkmode"  ] = "transfer"
+transfer_prev_df["A_id"      ] = "" # don't know
+transfer_prev_df["A_seq"     ] = ""
+transfer_prev_df["B_id"      ] = transfer_prev_df["survey_board_stop_id" ]
+transfer_prev_df["B_seq"     ] = ""
+transfer_prev_df["mode"      ] = "transfer"
+transfer_prev_df["route_id"  ] = "" # none
+transfer_prev_df["trip_id"   ] = "" # none
+transfer_prev_df["agency_id" ] = "" # none
+transfer_prev_df["service_id"] = "" # none
+transfer_prev_df["linknum"   ] = 2
+
+# survey transit leg -- everyone has this
+transit_df  = df.copy()
+transit_df["linkmode"] = "transit"
+transit_df["A_id"    ] = transit_df["survey_board_stop_id" ]
+transit_df["A_seq"   ] = transit_df["survey_board_stop_sequence"]
+transit_df["B_id"    ] = transit_df["survey_alight_stop_id"]
+transit_df["B_seq"   ] = transit_df["survey_alight_stop_sequence"]
+transit_df["mode"    ] = transit_df["survey_mode"]
+# transit_df["route_id"  ] set already
+# transit_df["trip_id"   ] set already
+# transit_df["agency_id" ] set already
+# transit_df["service_id"] set already
+# if the trip_id is null though, route_id isn't useful
+transit_df.loc[pd.isnull(transit_df["trip_id"]), "route_id"] = None
+transit_df["linknum" ] = -1
+transit_df.loc[ transit_df["boardings"]==1, "linknum"] = 1
+transit_df.loc[(transit_df["boardings"]==2)&pd.notnull(transit_df["transfer_to"  ]), "linknum"] = 1
+transit_df.loc[(transit_df["boardings"] >1)&pd.notnull(transit_df["transfer_from"]), "linknum"] = 3
+
+# next leg -- only if boardings > 1 and transfer_to
+transfer_next_df = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_to"]) ].copy()
+transfer_next_df["linkmode"  ] = "transfer"
+transfer_next_df["A_id"      ] = transfer_next_df["survey_alight_stop_id"]
+transfer_next_df["A_seq"     ] = ""
+transfer_next_df["B_id"      ] = "" # don't know
+transfer_next_df["B_seq"     ] = ""
+transfer_next_df["mode"      ] = "transfer"
+transfer_next_df["route_id"  ] = "" # none
+transfer_next_df["trip_id"   ] = "" # none
+transfer_next_df["agency_id" ] = "" # none
+transfer_next_df["service_id"] = "" # none
+transfer_next_df["linknum"   ] = transfer_next_df["boardings"]*2-2
+
+# next leg -- only if boardings > 1 and transfer_to
+transit_next_df  = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_to"]) ].copy()
+transit_next_df["linkmode"  ] = "transit"
+transit_next_df["A_id"      ] = "" # don't know
+transit_next_df["A_seq"     ] = ""
+transit_next_df["B_id"      ] = transit_next_df["last_alight_stop_id"]
+transit_next_df["B_seq"     ] = ""
+transit_next_df["mode"      ] = transit_next_df["last_alight_mode"]
+transit_next_df["route_id"  ] = "" # don't know
+transit_next_df["trip_id"   ] = "" # don't know
+transit_next_df["agency_id" ] = transit_next_df["agency_id transfer_to"]
+transit_next_df["service_id"] = transit_next_df["service_id transfer_to"]
+transit_next_df["linknum"   ] = transit_next_df["boardings"]*2-1
+
+# egress -- everyone has this
+egress_df    = df.copy()
+egress_df["linkmode"  ] = "egress"
+egress_df["A_id"      ] = egress_df["last_alight_stop_id"]
+egress_df["A_seq"     ] = ""
+egress_df["B_id"      ] = egress_df["dest_sf_taz"].apply(str)
+egress_df["B_seq"     ] = ""
+egress_df["mode"      ] = egress_df["egress_mode"] + "_egress"
+egress_df["route_id"  ] = ""
+egress_df["trip_id"   ] = ""
+egress_df["agency_id" ] = ""
+egress_df["service_id"] = ""
+egress_df["linknum"   ] = egress_df["boardings"]*2
+
+# put them all together
+path_links_df = pd.concat([access_df, transit_prev_df, transfer_prev_df, transit_df, transfer_next_df, transit_next_df, egress_df], axis=0)
+
+# keep only the columns we want and output links
+path_links_df = path_links_df[['person_id','person_trip_id','linkmode','A_id','A_seq','B_id','B_seq','linknum','mode','route_id','trip_id','agency_id','service_id']]
+path_links_df.sort_values(by=["person_id","person_trip_id","linknum"], inplace=True)
+
+# write it
+path_links_df.to_csv('OBS_FToutput_links.csv',index=False)
+print "Wrote OBS_FToutput_links.csv"
+
+# keep only the columns we want and output paths
+df = df[['person_id','person_trip_id','pathdir','pathmode']]
+df.sort_values(by=["person_id","person_trip_id"], inplace=True)
+df.to_csv('OBS_FToutput_paths.csv',index=False)
+print "Wrote OBS_FToutput_paths.csv"
