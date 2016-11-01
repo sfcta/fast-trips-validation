@@ -63,7 +63,7 @@ def get_closest_stop(person_trips_df, vehicle_stops_df, person_prefix):
 
     return person_trips_df
 
-def add_trip_id(person_trips_df, veh_trips_df, include_route):
+def add_trip_id(person_trips_df, veh_trips_df, include_route, hour_add):
     """
     Guesses at a trip id for the rows in the survey trips dataframe for the given operator, and adds it.
     """
@@ -74,11 +74,14 @@ def add_trip_id(person_trips_df, veh_trips_df, include_route):
     fasttrips.FastTripsLogger.debug("add_trip_id() person_trips_df.head()=\n%s" % str(person_trips_df.head()))
     fasttrips.FastTripsLogger.debug("add_trip_id() veh_trips_df.head()=\n%s" % str(veh_trips_df.head()))
 
+    # maybe the vehicle departs in the following hour
+    person_trips_df["veh depart_hour"] = person_trips_df["depart_hour"] + hour_add
+
     person_veh_df = {} # keep the person trips x vehicle trips here
     for stop_type in ["survey_board", "survey_alight"]:
         # see which trips qualify for the survey_board stop
-        left_on_cols  = ["service_id","survey_mode","depart_hour","%s_stop_id" % stop_type]
-        right_on_cols = ["service_id","mode",       "depart_hour","stop_id"]
+        left_on_cols  = ["service_id","survey_mode","veh depart_hour","%s_stop_id" % stop_type]
+        right_on_cols = ["service_id","mode",           "depart_hour","stop_id"]
         if include_route:
             left_on_cols.append("route_id")
             right_on_cols.append("route_id")
@@ -103,7 +106,7 @@ def add_trip_id(person_trips_df, veh_trips_df, include_route):
     fasttrips.FastTripsLogger.debug("trips %d\n%s" % (len(trips_df), str(trips_df.head())))
 
     # there are likely multiple -- pick the first one
-    trip_id_df = trips_df[["Unique_ID","service_id","survey_mode","route_id","trip_id"]].groupby(["Unique_ID","service_id","survey_mode","route_id"]).agg(["first"])
+    trip_id_df = trips_df[["Unique_ID","service_id","survey_mode","route_id","trip_id"]].groupby(["Unique_ID","service_id","survey_mode"]).agg(["first"])
     trip_id_df.columns = trip_id_df.columns.get_level_values(0) # flatten multiindex
     trip_id_df.reset_index(inplace=True)
 
@@ -117,7 +120,7 @@ def add_trip_id(person_trips_df, veh_trips_df, include_route):
                                suffixes=[""," trip"])
 
     person_trips_df.loc[ pd.notnull(person_trips_df["trip_id"]), "route_id"] = person_trips_df["route_id trip"]  # keep route_id for trip_id
-    person_trips_df.drop(["route_id trip"], axis=1, inplace=True)
+    person_trips_df.drop(["route_id trip", "veh depart_hour"], axis=1, inplace=True)
 
     fasttrips.FastTripsLogger.debug("\n%s" % str(person_trips_df.head(10)))
 
@@ -322,11 +325,21 @@ if __name__ == "__main__":
             (len(service_person_trips), service_id,
              pd.notnull(service_person_trips["survey_board_stop_id"]).sum(),
              pd.notnull(service_person_trips["survey_alight_stop_id"]).sum()))
-        service_person_trips_all = service_person_trips_all.append(service_person_trips)
 
         # try to add a trip id from the possible vehicle trips
-        service_person_trips = add_trip_id(service_person_trips, service_vehicle_trips, include_route=include_route)
-        fasttrips.FastTripsLogger.info("                                                                   and %8d trip_ids" % pd.notnull(service_person_trips["trip_id"]).sum())
+        service_person_trips = add_trip_id(service_person_trips, service_vehicle_trips, include_route=include_route, hour_add=0)
+        # split into sucess and failure
+        service_person_trips_success = service_person_trips[pd.notnull(service_person_trips["trip_id"])]
+        service_person_trips_fail    = service_person_trips[pd.isnull(service_person_trips["trip_id"])].copy()
+
+        service_person_trips_all = service_person_trips_all.append(service_person_trips_success)
+        fasttrips.FastTripsLogger.info("                                                 (depart_hour+0)   and %8d trip_ids" % len(service_person_trips_success))
+
+        # for fails, try the next hour
+        service_person_trips_fail.drop(["trip_id"], axis=1, inplace=True)
+        service_person_trips = add_trip_id(service_person_trips_fail, service_vehicle_trips, include_route=include_route, hour_add=1)
+        service_person_trips_all = service_person_trips_all.append(service_person_trips)
+        fasttrips.FastTripsLogger.info("                                                 (depart_hour+1)   and %8d trip_ids" % pd.notnull(service_person_trips["trip_id"]).sum())
 
         ####################### select the observed person trips TRANSFERING FROM this service and with non-null first_board coords
         service_xferfr_trips  = df.loc[ (df["service_id transfer_from"] == service_id)&
