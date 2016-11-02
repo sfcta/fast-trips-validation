@@ -14,8 +14,10 @@ AccEgrs_dict = {'bike':'bike', 'pnr':'PNR', 'knr':'KNR', '.':'walk'}
 df = pd.read_csv('OBSdata_wBART_wSFtaz_wStops.csv',
                  dtype={"survey_board_stop_id"       :object,
                         "survey_board_stop_sequence" :object, # treat as string
+                        "survey_board_time"          :object,
                         "survey_alight_stop_id"      :object,
                         "survey_alight_stop_sequence":object, # treat as string
+                        "survey_alight_time"         :object,
                         "first_board_stop_id"        :object,
                         "last_alight_stop_id"        :object,
                         "trip_id"                    :object},
@@ -98,6 +100,8 @@ access_df["trip_id"   ] = ""
 access_df["service_id"] = ""
 access_df["agency_id" ] = ""
 access_df["linknum"   ] = 0
+access_df["board_time" ] = ""
+access_df["alight_time"] = ""
 
 # previous leg -- only if boardings > 1 and transfer_from
 transit_prev_df  = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_from"]) ].copy()
@@ -112,6 +116,8 @@ transit_prev_df["trip_id"   ] = ""
 transit_prev_df["agency_id" ] = transit_prev_df["agency_id transfer_from"]
 transit_prev_df["service_id"] = transit_prev_df["service_id transfer_from"]
 transit_prev_df["linknum"   ] = 1
+transit_prev_df["board_time" ] = ""
+transit_prev_df["alight_time"] = ""
 
 transfer_prev_df = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_from"]) ].copy()
 transfer_prev_df["linkmode"  ] = "transfer"
@@ -125,6 +131,8 @@ transfer_prev_df["trip_id"   ] = "" # none
 transfer_prev_df["agency_id" ] = "" # none
 transfer_prev_df["service_id"] = "" # none
 transfer_prev_df["linknum"   ] = 2
+transfer_prev_df["board_time" ] = ""
+transfer_prev_df["alight_time"] = ""
 
 # survey transit leg -- everyone has this
 transit_df  = df.copy()
@@ -144,6 +152,18 @@ transit_df["linknum" ] = -1
 transit_df.loc[ transit_df["boardings"]==1, "linknum"] = 1
 transit_df.loc[(transit_df["boardings"]==2)&pd.notnull(transit_df["transfer_to"  ]), "linknum"] = 1
 transit_df.loc[(transit_df["boardings"] >1)&pd.notnull(transit_df["transfer_from"]), "linknum"] = 3
+transit_df["board_time" ] = transit_df["survey_board_time" ]
+transit_df["alight_time"] = transit_df["survey_alight_time"]
+
+day_part_to_board_time = {
+    "EARLY AM"  :"5:00:00",
+    "AM PEAK"   :"8:00:00",
+    "MIDDAY"    :"12:30:00",
+    "PM PEAK"   :"17:00:00",
+    "EVENING"   :"22:00:00",
+    "NIGHT"     :"1:00:00"
+}
+transit_df.loc[ pd.isnull(transit_df["board_time"]), "board_time" ] = transit_df["day_part"].replace(day_part_to_board_time)
 
 # next leg -- only if boardings > 1 and transfer_to
 transfer_next_df = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_to"]) ].copy()
@@ -158,6 +178,8 @@ transfer_next_df["trip_id"   ] = "" # none
 transfer_next_df["agency_id" ] = "" # none
 transfer_next_df["service_id"] = "" # none
 transfer_next_df["linknum"   ] = transfer_next_df["boardings"]*2-2
+transfer_next_df["board_time" ] = ""
+transfer_next_df["alight_time"] = ""
 
 # next leg -- only if boardings > 1 and transfer_to
 transit_next_df  = df.loc[ (df["boardings"]>1)&pd.notnull(df["transfer_to"]) ].copy()
@@ -172,6 +194,8 @@ transit_next_df["trip_id"   ] = "" # don't know
 transit_next_df["agency_id" ] = transit_next_df["agency_id transfer_to"]
 transit_next_df["service_id"] = transit_next_df["service_id transfer_to"]
 transit_next_df["linknum"   ] = transit_next_df["boardings"]*2-1
+transit_next_df["board_time" ] = ""
+transit_next_df["alight_time"] = ""
 
 # egress -- everyone has this
 egress_df    = df.copy()
@@ -186,12 +210,14 @@ egress_df["trip_id"   ] = ""
 egress_df["agency_id" ] = ""
 egress_df["service_id"] = ""
 egress_df["linknum"   ] = egress_df["boardings"]*2
+egress_df["board_time" ] = ""
+egress_df["alight_time"] = ""
 
 # put them all together
 path_links_df = pd.concat([access_df, transit_prev_df, transfer_prev_df, transit_df, transfer_next_df, transit_next_df, egress_df], axis=0)
 
 # keep only the columns we want and output links
-path_links_df = path_links_df[['person_id','person_trip_id','linkmode','A_id','A_seq','B_id','B_seq','linknum','mode','route_id','trip_id','agency_id','service_id']]
+path_links_df = path_links_df[['person_id','person_trip_id','linkmode','A_id','A_seq','B_id','B_seq','linknum','mode','route_id','trip_id','agency_id','service_id','board_time','alight_time']]
 path_links_df.sort_values(by=["person_id","person_trip_id","linknum"], inplace=True)
 
 # write it
