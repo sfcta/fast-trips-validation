@@ -207,6 +207,10 @@ if __name__ == "__main__":
             fasttrips.FastTripsLogger.fatal("Didn't understand %s operators:\n%s" % (xfer, str(missing_agency[xfer].value_counts())))
             sys.exit(2)
 
+    # OBS tech discrepency -- OBS calls amtrak "comuniter_rail" but the network has it as inter_regional_rail
+    df.loc[ df["transfer_from"] =="AMTRAK", "first_board_tech"] = "inter_regional_rail"
+    df.loc[ df["transfer_to"  ] =="AMTRAK", "last_alight_tech"] = "inter_regional_rail"
+
     # Add the survey mode to match network data
     df = pd.merge(left    =df,
                   right   =tech_bridge,
@@ -288,14 +292,28 @@ if __name__ == "__main__":
     # These are the operators
     fasttrips.FastTripsLogger.info("operator value_counts()=\n%s" % str(df["operator"].value_counts()))
 
+    # mark some lat/lons as invalid
+    (min_stop_lat, max_stop_lat, min_stop_lon, max_stop_lon) = ft.stops.stop_min_max_lat_lon()
+    for coord_type in ["survey_board", "survey_alight", "first_board", "last_alight"]:
+        df["%s_invalid_coord" % coord_type] = False
+        df.loc[ (df["%s_lat" % coord_type] < min_stop_lat-1.0)|
+                (df["%s_lat" % coord_type] > max_stop_lat+1.0)|
+                (df["%s_lon" % coord_type] < min_stop_lon-1.0)|
+                (df["%s_lon" % coord_type] > max_stop_lon+1.0), "%s_invalid_coord" % coord_type ] = True
+        fasttrips.FastTripsLogger.warn("Found %6d invalid coordinates for %s" % (df["%s_invalid_coord" % coord_type].sum(), coord_type))
+        fasttrips.FastTripsLogger.debug("\n%s" % str(df.loc[df["%s_invalid_coord" % coord_type] == True]))
+
     # ===========================================================
     # process one service_id at a time, for memory reasons and debugging
     service_person_trips_all = pd.DataFrame()
     service_xferfr_trips_all = pd.DataFrame()
     service_xferto_trips_all = pd.DataFrame()
 
-    df_service_series = df["service_id"].value_counts()
-    for service_id in df_service_series.keys():
+    service_id_set = set(df["service_id"].value_counts().keys()) | \
+                     set(df["service_id transfer_from"].value_counts().keys()) | \
+                     set(df["service_id transfer_to"].value_counts().keys())
+    fasttrips.FastTripsLogger.info("all service_ids: %s" % str(service_id_set))
+    for service_id in list(service_id_set):
 
         fasttrips.FastTripsLogger.info("======================== %s ========================" % service_id)
 
@@ -318,8 +336,10 @@ if __name__ == "__main__":
             veh_stops = service_unique_vehicle_stops.drop(["route_id"], axis=1)
 
 
-        ####################### select the observed person trips SURVEYED ON this service
-        service_person_trips  = df.loc[df["service_id"] == service_id]
+        ####################### select the observed person trips SURVEYED ON this service (with valid coords)
+        service_person_trips  = df.loc[ (df["service_id"] == service_id)&
+                                        (df["survey_board_invalid_coord"]==False)&
+                                        (df["survey_alight_invalid_coord"]==False)]
         fasttrips.FastTripsLogger.debug("service_person_trips=\n%s" % str(service_person_trips.head()))
 
         service_person_trips = get_closest_stop(service_person_trips, veh_stops, "survey_board")
@@ -348,7 +368,8 @@ if __name__ == "__main__":
         ####################### select the observed person trips TRANSFERING FROM this service and with non-null first_board coords
         service_xferfr_trips  = df.loc[ (df["service_id transfer_from"] == service_id)&
                                         pd.notnull(df["first_board_lat"])&
-                                        pd.notnull(df["first_board_lon"]),
+                                        pd.notnull(df["first_board_lon"])&
+                                        (df["first_board_invalid_coord"]==False),
                                        ["Unique_ID","service_id transfer_from","first_board_mode","first_board_lat","first_board_lon"]]
         service_xferfr_trips.rename(columns={"service_id transfer_from":"service_id",
                                              "first_board_mode":"mode"},
@@ -365,7 +386,8 @@ if __name__ == "__main__":
         ####################### select the observed person trips transfering to this service and with non-null last_alight coords
         service_xferto_trips  = df.loc[ (df["service_id transfer_to"] == service_id)&
                                         pd.notnull(df["last_alight_lat"])&
-                                        pd.notnull(df["last_alight_lon"]),
+                                        pd.notnull(df["last_alight_lon"])&
+                                        (df["last_alight_invalid_coord"]==False),
                                        ["Unique_ID","service_id transfer_to","last_board_mode","last_alight_lat","last_alight_lon"]]
         service_xferto_trips.rename(columns={"service_id transfer_to":"service_id",
                                              "last_alight_mode":"mode"},
