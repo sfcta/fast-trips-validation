@@ -168,6 +168,7 @@ if __name__ == "__main__":
         'orig_maz',              'orig_sf_taz',
         'dest_maz',              'dest_sf_taz',
         'day_part',              'depart_hour',
+        'weekpart',
         'onoff_enter_station',   'onoff_exit_station'
         ]]
 
