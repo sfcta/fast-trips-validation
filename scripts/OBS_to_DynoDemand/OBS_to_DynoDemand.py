@@ -4,6 +4,7 @@
 # Writes: household.txt, person.txt, trip_list.txt
 ##########################################################################################################
 import pandas as pd
+import numpy as np
 import os,string,sys
 from util_functions import *
 
@@ -31,24 +32,29 @@ purp_dict = {'at work':'work', 'work':'work', 'work-related':'work_based', 'home
 
 pass_media = ['Clipper','clipper','pass','exempt']
 
-AccEgrs_dict = {'pnr':'PNR', 'knr':'KNR', '.':'walk'}
+AccEgrs_dict = {'pnr':'PNR', 'knr':'KNR'}
 
+#MTC's defined time periods for survey
+time_periods = {'EARLY AM': [3,4,5],
+                'AM PEAK' : [6,7,8,9,10],
+                'MIDDAY'  : [11,12,13,14],
+                'PM PEAK' : [15,16,17,18],
+                'EVENING' : [19,20,21,22,23,0,1,2]}
+
+Midnight = {'24':'0', '25':'1', '26':'2'}
 #############################################################################################################
 dep_time_dist = readDistributionCDFs(os.path.join(os.path.dirname(os.path.realpath(__file__)), "DepartureTimeCDFs.dat"))
 
-df = pd.read_csv('OBSdata_wBART_wSFtaz.csv',
+# 'survey_wSFtaz.csv' is the new 'OBS_wBART_wSFtaz.csv' which contains survey_time column
+df = pd.read_csv('survey_wSFtaz.csv',
                   dtype={"onoff_enter_station":object,
                          "onoff_exit_station" :object,
                          "persons"            :object,
                          "ID"                 :object,
                          "approximate_age"    :float,  # really should be int but there are missing values
-                         "depart_hour"        :object,
-                         "return_hour"        :object},
-                  na_values=["missing","Missing","refused"])
+                         "depart_hour"        :object},
+                  na_values=["missing","Missing","refused","."])
 print "Read %d trips" % len(df)
-
-#Removing unnecessary columns
-df = df [['workers','vehicles','Unique_ID','ID','access_mode','depart_hour','return_hour','day_part','weekpart','egress_mode','fare_category','fare_medium','gender','household_income','persons','work_status','approximate_age','tour_purp','path_line_haul','dest_maz','dest_sf_taz','orig_maz','orig_sf_taz']]
 
 # Remove weekend trips
 df = df[ df['weekpart']=='WEEKDAY' ]
@@ -109,20 +115,48 @@ df["egress_mode"] = df["egress_mode"].replace(AccEgrs_dict)
 #### create mode
 df["mode"] = df["access_mode"] + "-transit-" + df["egress_mode"]
 
-#### create departure and arrival time based on depart_hour and return_hour
+#### create departure and arrival time, and also time target
+# Remove trips with missing day_part
+df = df[ df["day_part"].notnull() ]
+print "Removed trips with missing day_part, and filtered to %d trips" % len(df)
+# there is no "NIGHT" time period in MTC's defined time periods, so replace it bY "EVENING"
+df.loc[ df["day_part"]=="NIGHT", "day_part"] = "EVENING"
+# create "time_target" and assume "departure" as default values
+df["time_target"] = "departure"
+# create "trip_hour"
+df["trip_hour"] = np.nan
+
+# for unempty departure and return hours, set trip_hour to either depart_hour or return_hour which is in day_part
+for i in df[(df["depart_hour"].notnull()) & (df["return_hour"].notnull())].index:
+    print i
+    if int(df.loc[i,"depart_hour"]) in time_periods[df.loc[i,"day_part"]]:
+        df.loc[i,"trip_hour"] = str(int(df.loc[i,"depart_hour"]))
+        # if departure hour is in day_part, also set time_target to "arrival"
+        df.loc[i,"time_target"] = "arrival"
+    elif int(df.loc[i,"return_hour"]) in time_periods[df.loc[i,"day_part"]]:
+        df.loc[i,"trip_hour"] = str(int(df.loc[i,"return_hour"]))
+# Redefine 'EVENING' hours to be able to generate random numbers from it
+time_periods['EVENING'] = [19, 20, 21, 22, 23, 24, 25, 26]
+# if both departure and return hours are empty or neither is in day_part, randomly pick a time in day_part
+df.loc[df["trip_hour"].isnull(), "trip_hour"] = df["day_part"].map(lambda x: str(random.randint(time_periods[x][0], time_periods[x][-1])))
+# Replace [24,25,26] overnight hours to [0,1,2]
+df["trip_hour"] = df["trip_hour"].replace(Midnight)
+
 # create departure column = departure time in minutes after midnight
-df["departure"]      = df["depart_hour"].map(lambda x: chooseTimeFromDistribution(dep_time_dist[x]), na_action='ignore')
+df["departure"] = df["trip_hour"].map(lambda x: chooseTimeFromDistribution(dep_time_dist[x]), na_action='ignore')
+# create departure time in HH:MM:SS format
 df["departure_time"] = df["departure"].map(lambda x: convertTripTime(x), na_action='ignore')
-df["arrival"]        = df["return_hour"].map(lambda x: chooseTimeFromDistribution(dep_time_dist[x]), na_action='ignore')
-df["arrival_time"]   = df["arrival"].map(lambda x: convertTripTime(x), na_action='ignore')
-df["time_target"]    = "departure"           # don't know
+# where survey_time is available, use that as departure time
+df.loc[ df["survey_time"].notnull(), "departure_time"] = df["survey_time"]
+
+df["arrival_time"] = df["departure_time"]
 
 #### Value of Time
 '''VoT based on SFCTA RPM-9 Report, p39:
 - non-work VoT = 2/3 work VoT,
 - Impose a minimum of $1/hr and a maximum of $50/hr,
 - Impose a maximum of $5/hr for workers younger than 18 years old.'''
-df["vot"] = -1.0   # define it as an float type
+df["vot"] = -1.0   # define it as a float type
 df.loc[ (df["age"]<=18)&(df["worker_status"]=='full-time'),            "vot"] = 5.0  # max $5 for workers under than 18 years old
 df.loc[ pd.isnull(df["hh_income"])|(df["worker_status"]!='full-time'), "vot"] = 1.0  # $1 for non-workers
 
