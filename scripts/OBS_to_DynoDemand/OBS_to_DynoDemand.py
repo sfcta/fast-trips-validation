@@ -42,6 +42,11 @@ time_periods = {'EARLY AM': [3,4,5],
                 'EVENING' : [19,20,21,22,23,0,1,2]}
 
 Midnight = {'24':'0', '25':'1', '26':'2'}
+
+DepartToSurveyMin = 15  # time between departure and survey time (min)
+SurveytoArriveMin = 15  # time between survey time and arrival (min)
+AvgTripLeg = 30         # avg time for a leg in transit trip (min)
+DepartToArriveMin = 40  # avg time between departure and arrival for a direct transit trip (min)
 #############################################################################################################
 dep_time_dist = readDistributionCDFs(os.path.join(os.path.dirname(os.path.realpath(__file__)), "DepartureTimeCDFs.dat"))
 
@@ -53,7 +58,7 @@ df = pd.read_csv('survey_wSFtaz.csv',
                          "ID"                 :object,
                          "approximate_age"    :float,  # really should be int but there are missing values
                          "depart_hour"        :object},
-                  na_values=["missing","Missing","refused","."])
+                  na_values=["missing","Missing","refused",".","None"])
 print "Read %d trips" % len(df)
 
 # Remove weekend trips
@@ -115,41 +120,67 @@ df["egress_mode"] = df["egress_mode"].replace(AccEgrs_dict)
 #### create mode
 df["mode"] = df["access_mode"] + "-transit-" + df["egress_mode"]
 
-#### create departure and arrival time, and also time target
-# Remove trips with missing day_part
+#### create time target
+# Remove trips with missing day_part (if day_part is missing, survey_time is not avilable either)
 df = df[ df["day_part"].notnull() ]
 print "Removed trips with missing day_part, and filtered to %d trips" % len(df)
 # there is no "NIGHT" time period in MTC's defined time periods, so replace it bY "EVENING"
 df.loc[ df["day_part"]=="NIGHT", "day_part"] = "EVENING"
-# create "time_target" and assume "departure" as default values
-df["time_target"] = "departure"
-# create "trip_hour"
-df["trip_hour"] = np.nan
-
-# for unempty departure and return hours, set trip_hour to either depart_hour or return_hour which is in day_part
+# create "time_target"
+df["time_target"] = np.nan
+# for unempty departure and return hours, set time_target to:
+#  "arrival"   , if departure hour is in day_part; 
+#  "departure" , if return hour is in day_part
 for i in df[(df["depart_hour"].notnull()) & (df["return_hour"].notnull())].index:
-    print i
     if int(df.loc[i,"depart_hour"]) in time_periods[df.loc[i,"day_part"]]:
-        df.loc[i,"trip_hour"] = str(int(df.loc[i,"depart_hour"]))
-        # if departure hour is in day_part, also set time_target to "arrival"
         df.loc[i,"time_target"] = "arrival"
     elif int(df.loc[i,"return_hour"]) in time_periods[df.loc[i,"day_part"]]:
-        df.loc[i,"trip_hour"] = str(int(df.loc[i,"return_hour"]))
-# Redefine 'EVENING' hours to be able to generate random numbers from it
+        df.loc[i,"time_target"] = "departure"
+
+#### create survey time
+# create "survey_hour"
+df["survey_hour"] = np.nan
+# Redefine 'EVENING' hours in time_periods dict to be able to generate random numbers from it
 time_periods['EVENING'] = [19, 20, 21, 22, 23, 24, 25, 26]
-# if both departure and return hours are empty or neither is in day_part, randomly pick a time in day_part
-df.loc[df["trip_hour"].isnull(), "trip_hour"] = df["day_part"].map(lambda x: str(random.randint(time_periods[x][0], time_periods[x][-1])))
+# if neither departure nor return hour is in day_part, randomly pick a time in day_part as survey_hour
+df.loc[ df["time_target"].isnull(), "survey_hour"] = df["day_part"].map(lambda x: str(random.randint(time_periods[x][0], time_periods[x][-1])), na_action='ignore')
 # Replace [24,25,26] overnight hours to [0,1,2]
-df["trip_hour"] = df["trip_hour"].replace(Midnight)
+df["survey_hour"] = df["survey_hour"].replace(Midnight)
+# create survey_min column = survey time in minutes after midnight
+df["survey_min"] = df["survey_hour"].map(lambda x: chooseTimeFromDistribution(dep_time_dist[x]), na_action='ignore')
+# for those where survey_time is already available, get the actual survey_min
+df.loc[ df["survey_time"].notnull(), "survey_min"] = df["survey_time"].map(lambda x: int(convertTimetoMinutes(x)), na_action='ignore')
 
-# create departure column = departure time in minutes after midnight
-df["departure"] = df["trip_hour"].map(lambda x: chooseTimeFromDistribution(dep_time_dist[x]), na_action='ignore')
-# create departure time in HH:MM:SS format
+#### create departure and arrival time
+# create "departure" and "arrival" columns
+df["departure"] = np.nan
+df["arrival"] = np.nan
+# Break df into two dataframes: SurveyTime_df, DepartReturn_df
+
+# (1)SurveyTime_df: Either survey time was available or it was calculated based on day_part
+SurveyTime_df = df.loc [df["survey_min"].notnull()]
+# consider departure to have happened x minutes before survey and subtract another y min if another leg
+SurveyTime_df["departure"] = df["survey_min"] - DepartToSurveyMin
+SurveyTime_df.loc[ SurveyTime_df["transfer_from"].notnull(), "departure"] = df["survey_min"] - DepartToSurveyMin - AvgTripLeg
+# consider arrival to have happened x minutes after survey, and add another y min if another leg
+SurveyTime_df["arrival"] = df["survey_min"] + SurveytoArriveMin
+SurveyTime_df.loc[ SurveyTime_df["transfer_to"].notnull(), "arrival"] = df["survey_min"] + SurveytoArriveMin + AvgTripLeg
+# if time_target is not set yet, assume "departure"
+SurveyTime_df.loc[ SurveyTime_df["time_target"].isnull(), "time_target"] = "departure"
+
+# (2)DepartReturn_df: Survey time was not available, and either depart or return hour was in day_part
+DepartReturn_df = df.loc [df["survey_min"].isnull()]
+# create departure column = departure time (based on either depart or return hour) in minutes after midnight
+DepartReturn_df.loc[ DepartReturn_df["time_target"]=="arrival"  , "departure"] = DepartReturn_df["depart_hour"].map(lambda x: chooseTimeFromDistribution(dep_time_dist[x]), na_action='ignore')
+DepartReturn_df.loc[ DepartReturn_df["time_target"]=="departure", "departure"] = DepartReturn_df["return_hour"].map(lambda x: chooseTimeFromDistribution(dep_time_dist[str(int(x))]), na_action='ignore')
+# consider arrival to have happened z minutes after departure and add y more minute per transfer
+DepartReturn_df["arrival"] = DepartReturn_df["departure"] + DepartToArriveMin + (DepartReturn_df["boardings"]-1)*AvgTripLeg
+
+# put them back together
+df = pd.concat([SurveyTime_df, DepartReturn_df], axis=0)
+# create departure and arrival time in HH:MM:SS format
 df["departure_time"] = df["departure"].map(lambda x: convertTripTime(x), na_action='ignore')
-# where survey_time is available, use that as departure time
-df.loc[ df["survey_time"].notnull(), "departure_time"] = df["survey_time"]
-
-df["arrival_time"] = df["departure_time"]
+df["arrival_time"]   = df["arrival"].map(lambda x: convertTripTime(x), na_action='ignore')
 
 #### Value of Time
 '''VoT based on SFCTA RPM-9 Report, p39:
