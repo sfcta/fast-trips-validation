@@ -47,7 +47,7 @@ Midnight = {'24':'0', '25':'1', '26':'2'}
 
 DepartToSurveyMin = 15  # time between departure and survey time (min)
 SurveytoArriveMin = 15  # time between survey time and arrival (min)
-AvgTripLeg = 30         # avg time for a leg in transit trip (min)
+AvgTripLeg        = 30  # avg time for a leg in transit trip (min)
 DepartToArriveMin = 40  # avg time between departure and arrival for a direct transit trip (min)
 #############################################################################################################
 dep_time_dist = readDistributionCDFs(os.path.join(os.path.dirname(os.path.realpath(__file__)), "DepartureTimeCDFs.dat"))
@@ -131,21 +131,20 @@ print "Removed trips with missing day_part, and filtered to %d trips" % len(df)
 df.loc[ df["day_part"]=="NIGHT", "day_part"] = "EVENING"
 # create "time_target"
 df["time_target"] = np.nan
-# for unempty departure and return hours, set time_target to:
-#  "arrival"   , if departure hour is in day_part; 
-#  "departure" , if return hour is in day_part
 
-# Make hour => day part dictionary
+# create hour => day_part dictionary
 hour_to_day_part = {}
-for time_period_key in time_periods:
+for time_period_key in time_periods.keys():
   for hour in time_periods[time_period_key]:
     hour_to_day_part[str(hour)] = time_period_key
-print hour_to_day_part
 df["depart_hour day_part"] = df["depart_hour"].replace(hour_to_day_part)
 df["return_hour day_part"] = df["return_hour"].replace(hour_to_day_part)
-df.loc[(df["depart_hour"].notnull())&(df["return_hour"].notnull())&(df["return_hour day_part"]==df["day_part"]), "time_target"] = "departure"
-df.loc[(df["depart_hour"].notnull())&(df["return_hour"].notnull())&(df["depart_hour day_part"]==df["day_part"]), "time_target"] = "arrival"
-print df["time_target"].value_counts()
+
+# for unempty departure and return hours, set time_target to:
+#  "departure" , if return_hour is in day_part;
+#  "arrival"   , if depart_hour is in day_part
+df.loc[(df["return_hour"].notnull())&(df["return_hour day_part"]==df["day_part"]), "time_target"] = "departure"
+df.loc[(df["depart_hour"].notnull())&(df["depart_hour day_part"]==df["day_part"]), "time_target"] = "arrival"
 
 #### create survey time
 # create "survey_hour"
