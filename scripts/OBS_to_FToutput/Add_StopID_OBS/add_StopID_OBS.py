@@ -1,7 +1,7 @@
 ######################################################################################################
 # Finds corresponding stop_id's for boarding/alighting locations in OBS file by matching stops' lat/long
-# Reads: OBSdata_wBART_wSFtaz.csv, GTFS Plus network, OBS_GTFS_route_dict.xlsx
-# Writes: OBSdata_wBART_wSFtaz_wStops.csv
+# Reads: survey_wSFtaz.csv, GTFS Plus network, OBS_GTFS_route_dict.xlsx
+# Writes: survey_wSFtaz_wStops.csv
 #######################################################################################################
 import pandas as pd
 import numpy
@@ -160,7 +160,7 @@ if __name__ == "__main__":
                              output_dir       = ".")
 
     # Read the observed person trips file
-    df = pd.read_csv('OBSdata_wBART_wSFtaz.csv',
+    df = pd.read_csv('survey_wSFtaz.csv',
                      dtype={"onoff_enter_station":object,
                             "onoff_exit_station":object,
                             "persons":object},
@@ -424,6 +424,6 @@ if __name__ == "__main__":
                   right=service_xferfr_trips_all[["Unique_ID","first_board_stop_id","first_board_stop_name","first_board_stop_dist"]],
                   how  ="left")
 
-    OUTFILE = "OBSdata_wBART_wSFtaz_wStops.csv"
+    OUTFILE = "survey_wSFtaz_wStops.csv"
     df.to_csv(OUTFILE, index=False, date_format="%H:%M:%S")
     fasttrips.FastTripsLogger.info("Wrote %s" % OUTFILE)

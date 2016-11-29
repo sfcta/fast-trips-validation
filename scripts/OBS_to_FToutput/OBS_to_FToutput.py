@@ -1,6 +1,6 @@
 ######################################################################################################
 # Converts OBS to dyno-path format (https://github.com/osplanning-data-standards/dyno-path)
-# Reads: OBSdata_wBART_wSFtaz_wStops.csv, trip_list.txt (for person_trip_id)
+# Reads: survey_wSFtaz_wStops.csv, trip_list.txt (for person_trip_id)
 # Writes: OBS_FToutput_links.csv
 #######################################################################################################
 import pandas as pd
@@ -11,7 +11,7 @@ pd.set_option('display.width', 300)
 AccEgrs_dict = {'bike':'bike', 'pnr':'PNR', 'knr':'KNR', '.':'walk'}
 
 # stop ids are strings, not floats
-df = pd.read_csv('OBSdata_wBART_wSFtaz_wStops.csv',
+df = pd.read_csv('survey_wSFtaz_wStops.csv',
                  dtype={"survey_board_stop_id"       :object,
                         "survey_board_stop_sequence" :object, # treat as string
                         "survey_board_time"          :object,

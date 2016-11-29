@@ -8,6 +8,8 @@ import numpy as np
 import os,string,sys
 from util_functions import *
 
+random.seed(1)
+
 pd.set_option('display.width', 300)
 
 Num_dict = {'zero':'0','one':'1', 'two':'2', 'three':'3', 'four':'4', 'five':'5', 
@@ -57,7 +59,8 @@ df = pd.read_csv('survey_wSFtaz.csv',
                          "persons"            :object,
                          "ID"                 :object,
                          "approximate_age"    :float,  # really should be int but there are missing values
-                         "depart_hour"        :object},
+                         "depart_hour"        :object,
+                         "return_hour"        :object},
                   na_values=["missing","Missing","refused",".","None"])
 print "Read %d trips" % len(df)
 
@@ -131,11 +134,18 @@ df["time_target"] = np.nan
 # for unempty departure and return hours, set time_target to:
 #  "arrival"   , if departure hour is in day_part; 
 #  "departure" , if return hour is in day_part
-for i in df[(df["depart_hour"].notnull()) & (df["return_hour"].notnull())].index:
-    if int(df.loc[i,"depart_hour"]) in time_periods[df.loc[i,"day_part"]]:
-        df.loc[i,"time_target"] = "arrival"
-    elif int(df.loc[i,"return_hour"]) in time_periods[df.loc[i,"day_part"]]:
-        df.loc[i,"time_target"] = "departure"
+
+# Make hour => day part dictionary
+hour_to_day_part = {}
+for time_period_key in time_periods:
+  for hour in time_periods[time_period_key]:
+    hour_to_day_part[str(hour)] = time_period_key
+print hour_to_day_part
+df["depart_hour day_part"] = df["depart_hour"].replace(hour_to_day_part)
+df["return_hour day_part"] = df["return_hour"].replace(hour_to_day_part)
+df.loc[(df["depart_hour"].notnull())&(df["return_hour"].notnull())&(df["return_hour day_part"]==df["day_part"]), "time_target"] = "departure"
+df.loc[(df["depart_hour"].notnull())&(df["return_hour"].notnull())&(df["depart_hour day_part"]==df["day_part"]), "time_target"] = "arrival"
+print df["time_target"].value_counts()
 
 #### create survey time
 # create "survey_hour"
