@@ -6,7 +6,7 @@
 :: These are Lisa's settings
 if %USERNAME%==lzorn (
   rem set OBS_RAW_FILE=M:\Data\OnBoard\Data and Reports\_data Standardized\share_data\survey.csv
-  set OBS_RAW_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\3-Transit Demand\OBS_fasttrips_demand\OBSdata_wBART.csv
+  set OBS_RAW_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\3-Transit Demand\OBS_fasttrips_demand\OBS_fasttrips_demand_v1.3\survey.csv
   set MTCMAZ_TO_SFTAZ_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\4-Transit Rider Behavior\mtcmaz_to_sftaz.csv
   set OBS_GTFS_ROUTE_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\4-Transit Rider Behavior\OBS_GTFS_route_dict.xlsx
   set NETWORK_DIR=C:\Users\lzorn\Box Sync\SHRP C-10\2-Network Supply\sfcta\network_draft1.9
@@ -15,12 +15,11 @@ if %USERNAME%==lzorn (
 )
 
 :: copy the raw On Board Survey data file into place
-copy "%OBS_RAW_FILE%" OBSdata_wBART.csv
+copy "%OBS_RAW_FILE%" survey.csv
 :: copy the MTC MAZ to SFCTA TAZ mapping into place
 copy "%MTCMAZ_TO_SFTAZ_FILE%" .
 :: copy the OBS to GTFS route dictionary into place
 copy "%OBS_GTFS_ROUTE_FILE%" .
-
 
 :: ===================== fasttrips input (Dyno-Demand) ==================================================================
 
