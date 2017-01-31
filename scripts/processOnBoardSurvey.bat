@@ -37,8 +37,8 @@ if errorlevel 1 goto error
 
 :: ===================== fasttrips ouptput (Dyno-Path) ==================================================================
 :: Add the stop ID
-::  Reads: OBSdata_wBART_wSFtaz.csv, stops.txt
-:: Writes: OBSdata_wBART_wSFtaz_wStops.csv
+::  Reads: survey_wSFtaz.csv, stops.txt
+:: Writes: survey_wSFtaz_wStops.csv
 set PYTHONPATH=%FT_CODE_DIR%
 python "%CODE_DIR%\scripts\OBS_to_DynoPath\Add_StopID_OBS\add_StopID_OBS.py" "%NETWORK_DIR%"
 if errorlevel 1 goto error
