@@ -50,3 +50,9 @@ def convertTripTime(triptime):
         return '%02d:%02d:00' %(hour,minute)
     else:
         return ''
+
+def convertTimetoMinutes(time):
+    hour   = int( time.split(":")[0] )
+    minute = int( time.split(":")[1] )
+    triptime = hour*60 + minute
+    return triptime

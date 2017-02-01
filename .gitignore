@@ -1,4 +1,4 @@
 *.pyc
-_rundir
+_rundir*
 *.project
 *.pydevproject

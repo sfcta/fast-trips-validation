@@ -27,7 +27,9 @@ TBA ...
 
 ### 2.2. [CHTS\_to\_FToutput](CHTS_to_FToutput)
 
-Run [*CHTS\_to\_FToutput.py*](CHTS_to_FToutput/CHTS_to_FToutput.py) to convert CHTS gps trips data (*w_gpstrips.csv*) to FT passenger links output format (*CHTS_FToutput.csv*).
+**2.2.1.** Run [*CHTS\_to\_FToutput.py*](CHTS_to_FToutput/CHTS_to_FToutput.py) to convert CHTS gps trips data (*w_gpstrips.csv*) to FT passenger links output format (*CHTS_FToutput.csv*).
+
+**2.2.2.** Run [*add\_StopID\_RouteID\_CHTS.py*](CHTS_to_FToutput/add_StopID_RouteID_CHTS.py) to find corresponding stop_id for A node/B node in *CHTS\_FToutput.csv* by matching lat/long and operator\_type, and produces *CHTS_FToutput_wStops_wRoutes.csv*.
 
 
 
