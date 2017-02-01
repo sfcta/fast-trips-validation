@@ -38,30 +38,27 @@ NETWORK_AGENCY_TO_OPERATOR_TYPE = {
     "ferry"                 :"Ferry",
     "sf_muni"               :"sf_muni"
 }
-'''
-# bridge from stop_id to taz_id
-taz_dict = pd.read_excel('stops.xlsx','Sheet1')
-taz_dict.index = taz_dict.stop_id
-taz_dict = taz_dict.drop('stop_id',axis=1)
-STOPS_TO_SFTAZ = taz_dict.to_dict()['zone_id']
-'''
+
+
 muni_operations = ["Local_bus/Rapid_bus", "MuniMetro/VTA", "Street_car/Cable_car"]
-max_dist = 0.2 # max ditance for stop_id matching based on stops' lat/lon
+max_dist = 0.25 # max distance for stop_id matching based on stops' lat/lon
 
 def get_closest_stop(person_trips_df, vehicle_stops_df, location_prefix):
     # join the person trips with the stops
-    person_trips_by_stops_df = pd.merge(left=person_trips_df,
+    person_trips_df = pd.merge(left=person_trips_df,
                                         right=vehicle_stops_df,
                                         how="inner")
 
     # calculate the distance from [location_prefix]_lat, [location_prefix]_lon, and the stop
-    fasttrips.Util.calculate_distance_miles(person_trips_by_stops_df,
+    fasttrips.Util.calculate_distance_miles(person_trips_df,
                                             origin_lat="%s_lat" % location_prefix, origin_lon="%s_lon" % location_prefix,
                                             destination_lat="stop_lat",            destination_lon="stop_lon",
-                                            distance_colname="%s_stop_dist" % location_prefix)
+                                            distance_colname="stop_dist")
 
-    # get the closest stop
-    person_trips_df = person_trips_by_stops_df.loc[ person_trips_by_stops_df.groupby("Unique_ID")["%s_stop_dist" % location_prefix].idxmin() ]
+    # get the stops that are within a user defined range
+    person_trips_df = person_trips_df[person_trips_df['stop_dist'] < max_dist]
+    person_trips_df = person_trips_df.sort_values(['Unique_ID','route_id','stop_dist'])
+    person_trips_df = person_trips_df.groupby(['Unique_ID','route_id']).head(1)
 
     # rename the new columns
     person_trips_df.rename(columns={"stop_id"  :"%s_stop_id"   % location_prefix,
@@ -112,8 +109,7 @@ if __name__ == "__main__":
         service_unique_vehicle_stops = service_vehicle_trips[["operator_type","route_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
         for i in Locations:
             stops = get_closest_stop(service_person_trips, service_unique_vehicle_stops, i)
-            stops = stops [ stops[i+'_stop_dist'] < max_dist ]
-            stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon', i+'_route_id']]
+            stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon', i+'_route_id', i+'_stop_dist']]
             if   i=='A'  : 
                 A_stops  = A_stops.append(stops, ignore_index=True)
             else         : 
@@ -140,14 +136,26 @@ if __name__ == "__main__":
     new_df = df
     new_df = pd.merge (new_df, A_stops, how='left', on='Unique_ID')
     new_df = pd.merge (new_df, B_stops, how='left', on='Unique_ID')
+    new_df['sum_dist'] = new_df['A_stop_dist'] + new_df['B_stop_dist']
+    # first, pick out the records for which A_route_id and B_route_id are the same
+    # ideally, all records should fall in this category since each record is a single unlinked transit trip
+    screen_uids = new_df.loc[(new_df['A_route_id']==new_df['B_route_id']) & (pd.notnull(new_df['A_route_id'])), 'Unique_ID'].unique()
+    new_df1 = new_df.loc[new_df['Unique_ID'].isin(screen_uids),]
+    new_df1 = new_df.loc[(new_df['A_route_id']==new_df['B_route_id']) & (pd.notnull(new_df['A_route_id'])),]
+    new_df1 = new_df1.groupby(['Unique_ID']).head(1)
+    
+    # now, deal with the records for which the A and B routes don't match. It appears like BART transfers are not being detected by GPS in some cases
+    # we will just minimize the sum of distances to potential transit stops matches on both ends
+    new_df = new_df.loc[new_df['Unique_ID'].isin(screen_uids)==False,]
+    new_df = new_df.sort_values(['Unique_ID','sum_dist'])
+    new_df = new_df.groupby(['Unique_ID']).head(1)
 
-#     #A_id in access links and B_id in egress links should be taz_id and not stop_id
-#     new_df['A_id'] = None
-#     new_df['A_id'] = new_df['A_stop_id'].replace(STOPS_TO_SFTAZ)
-#     new_df.loc [ df['linkmode']!='access', 'A_id' ] = new_df['A_stop_id']
-#     new_df['B_id'] = None
-#     new_df['B_id'] = new_df['B_stop_id'].replace(STOPS_TO_SFTAZ)
-#     new_df.loc [ df['linkmode']!='egress', 'B_id' ] = new_df['B_stop_id']
-   
+    # combine both dataframes
+    new_df = new_df.append(new_df1)
+    
+    #A_id in access links and B_id in egress links should be taz_id and not stop_id
+    # however, mapping to TAZ will be done offline by SFCTA using coordinated and TAZ shapefile  
+
+    new_df = new_df.sort_values(['Unique_ID'])
     new_df.to_csv("CHTS_FToutput_wStops_wRoutes.csv", index=False)
     print 'Done'
