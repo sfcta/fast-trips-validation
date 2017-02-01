@@ -9,7 +9,7 @@ if %USERNAME%==lzorn (
   set OBS_RAW_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\3-Transit Demand\OBS_fasttrips_demand\OBS_fasttrips_demand_v1.3\survey.csv
   set MTCMAZ_TO_SFTAZ_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\4-Transit Rider Behavior\mtcmaz_to_sftaz.csv
   set OBS_GTFS_ROUTE_FILE=C:\Users\lzorn\Box Sync\SHRP C-10\4-Transit Rider Behavior\OBS_GTFS_route_dict.xlsx
-  set NETWORK_DIR=C:\Users\lzorn\Box Sync\SHRP C-10\2-Network Supply\sfcta\network_draft1.9
+  set NETWORK_DIR=C:\Users\lzorn\Box Sync\SHRP C-10\2-Network Supply\sfcta\network_draft1.10_fare
   set CODE_DIR=C:\Users\lzorn\Documents\fast-trips-validation
   set FT_CODE_DIR=C:\Users\lzorn\Documents\fast-trips-develop
 )
@@ -37,16 +37,16 @@ if errorlevel 1 goto error
 
 :: ===================== fasttrips ouptput (Dyno-Path) ==================================================================
 :: Add the stop ID
-::  Reads: OBSdata_wBART_wSFtaz.csv, stops.txt
-:: Writes: OBSdata_wBART_wSFtaz_wStops.csv
+::  Reads: survey_wSFtaz.csv, stops.txt
+:: Writes: survey_wSFtaz_wStops.csv
 set PYTHONPATH=%FT_CODE_DIR%
-python "%CODE_DIR%\scripts\OBS_to_FToutput\Add_StopID_OBS\add_StopID_OBS.py" "%NETWORK_DIR%"
+python "%CODE_DIR%\scripts\OBS_to_DynoPath\Add_StopID_OBS\add_StopID_OBS.py" "%NETWORK_DIR%"
 if errorlevel 1 goto error
 
 :: Create the dyno-path version of the On Board Survey
 ::  Reads: trip_list.txt, OBSdata_wBART_wSFtaz_wStops.csv
 :: Writes: OBS_FToutput_links.csv, OBS_FToutput_paths.csv
-python "%CODE_DIR%\scripts\OBS_to_FToutput\OBS_to_FToutput.py"
+python "%CODE_DIR%\scripts\OBS_to_DynoPath\OBS_to_DynoPath.py"
 if errorlevel 1 goto error
 
 :: ===================== map the fasttrips output ==================================================================
