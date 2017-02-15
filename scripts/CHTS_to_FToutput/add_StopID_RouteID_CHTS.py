@@ -5,7 +5,7 @@
 ####################################################################################
 import pandas as pd
 import fasttrips
-NETWORK_DIR = r"Q:\Model Development\SHRP2-fasttrips\Task2\built_fasttrips_network_2012Base\draft1.9"
+NETWORK_DIR = r"C:\Code\fast-trips\Examples\sfcta\network_draft1.10_fare"
 
 # bridge from CHTS travel_mode => operator_type
 CHTS_MODE_TO_OPERATOR_TYPE = {
@@ -62,16 +62,17 @@ def get_closest_stop(person_trips_df, vehicle_stops_df, location_prefix):
 
     # get the stops that are within a user defined range
     person_trips_df = person_trips_df[person_trips_df['stop_dist'] < max_dist]
-    person_trips_df = person_trips_df.sort_values(['Unique_ID','route_id','stop_dist'])
+    person_trips_df = person_trips_df.sort_values(['Unique_ID','route_id','agency_id','stop_dist'])
     person_trips_df = person_trips_df.groupby(['Unique_ID','route_id']).head(1)
 
     # rename the new columns
-    person_trips_df.rename(columns={"stop_id"  :"%s_stop_id"   % location_prefix,
-                                    "stop_name":"%s_stop_name" % location_prefix,
-                                    "stop_lat" :"%s_stop_lat"  % location_prefix,
-                                    "stop_lon" :"%s_stop_lon"  % location_prefix,
-                                    "stop_dist":"%s_stop_dist" % location_prefix,
-                                    "route_id" :"%s_route_id"  % location_prefix}, inplace=True)
+    person_trips_df.rename(columns={"stop_id"   :"%s_stop_id"   % location_prefix,
+                                    "stop_name" :"%s_stop_name" % location_prefix,
+                                    "stop_lat"  :"%s_stop_lat"  % location_prefix,
+                                    "stop_lon"  :"%s_stop_lon"  % location_prefix,
+                                    "stop_dist" :"%s_stop_dist" % location_prefix,
+                                    "route_id"  :"%s_route_id"  % location_prefix,
+                                    "agency_id" :"%s_agency_id"  % location_prefix}, inplace=True)
     return person_trips_df
 
 if __name__ == "__main__":
@@ -111,10 +112,10 @@ if __name__ == "__main__":
         service_person_trips  = df.loc[ df["operator_type"] == OPtype ]
     
         print OPtype
-        service_unique_vehicle_stops = service_vehicle_trips[["operator_type","route_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
+        service_unique_vehicle_stops = service_vehicle_trips[["operator_type","agency_id","route_id","stop_id","stop_name","stop_lat","stop_lon"]].drop_duplicates()
         for i in Locations:
             stops = get_closest_stop(service_person_trips, service_unique_vehicle_stops, i)
-            stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon', i+'_route_id', i+'_stop_dist']]
+            stops = stops[['Unique_ID', i+'_stop_id', i+'_stop_name', i+'_stop_lat', i+'_stop_lon', i+'_route_id', i+'_agency_id', i+'_stop_dist']]
             if   i=='A'  : 
                 A_stops  = A_stops.append(stops, ignore_index=True)
             else         : 
