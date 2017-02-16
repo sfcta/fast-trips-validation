@@ -52,6 +52,9 @@ elif RUNMODE==2:
     path_links_df = pd.read_csv(os.path.join(work_dir, outfile_links), dtype={"person_trip_id":object})
     path_links_df = path_links_df.loc[(path_links_df['person_id']).isin(df['person_id']) & (path_links_df['person_trip_id']).isin(df['person_trip_id']),]
     path_links_df.sort_values(by=["person_id","person_trip_id","linknum"], inplace=True)
+    path_links_df.loc[pd.isnull(path_links_df['A_id']), 'A_id'] = 0
+    path_links_df.loc[pd.isnull(path_links_df['B_id']), 'B_id'] = 0
+    path_links_df[['A_id','B_id']] = path_links_df[['A_id','B_id']].astype(int)
     path_links_df.to_csv(os.path.join(work_dir, outfile_links), index=False)
     
 
