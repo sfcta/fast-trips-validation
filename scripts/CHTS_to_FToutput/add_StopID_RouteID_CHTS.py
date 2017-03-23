@@ -25,7 +25,7 @@ CHTS_MODE_TO_OPERATOR_TYPE = {
 NETWORK_AGENCY_TO_OPERATOR_TYPE = {
     "bart"                  :"BART",
     "airbart"               :"AirBART",
-    "ac_transit"            :"GoldenGate/AC_transit",
+    "ac_transit"            :"ac_transit",
     "caltrain"              :"ACE/Caltrain",
     "samtrans"              :"Local_bus/Rapid_bus",
     "golden_gate_transit"   :"GoldenGate/AC_transit",
@@ -44,9 +44,9 @@ NETWORK_AGENCY_TO_OPERATOR_TYPE = {
     "sf_muni"               :"sf_muni"
 }
 
-
+ac_transit_operations = ['GoldenGate/AC_transit']
 muni_operations = ["Local_bus/Rapid_bus", "MuniMetro/VTA", "Street_car/Cable_car"]
-max_dist = 0.25 # max distance for stop_id matching based on stops' lat/lon
+max_dist = 0.2 # max distance for stop_id matching based on stops' lat/lon
 
 def get_closest_stop(person_trips_df, vehicle_stops_df, location_prefix):
     # join the person trips with the stops
@@ -109,6 +109,16 @@ if __name__ == "__main__":
             muni_vehicle_trips["operator_type"] = OPtype
             # add sf_muni trips to service_vehicle_trips
             service_vehicle_trips = service_vehicle_trips.append(muni_vehicle_trips)
+            if OPtype == 'Local_bus/Rapid_bus':
+                # add ac transit
+                ac_vehicle_trips = full_trips_df.loc[ full_trips_df["operator_type"] == 'ac_transit' ]
+                ac_vehicle_trips["operator_type"] = OPtype
+                service_vehicle_trips = service_vehicle_trips.append(ac_vehicle_trips)
+        # we also need to add ac transit trips for "GoldenGate/AC_transit"
+        if OPtype in ac_transit_operations:
+            ac_vehicle_trips = full_trips_df.loc[ full_trips_df["operator_type"] == 'ac_transit' ]
+            ac_vehicle_trips["operator_type"] = OPtype
+            service_vehicle_trips = service_vehicle_trips.append(ac_vehicle_trips)
         service_person_trips  = df.loc[ df["operator_type"] == OPtype ]
     
         print OPtype
