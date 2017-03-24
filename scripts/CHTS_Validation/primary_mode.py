@@ -5,11 +5,13 @@ Created on Mon Mar 20 15:09:41 2017
 @author: jchang
 """
 
+sys.path.append("..")
+from util_functions import *
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
-from math import radians, cos, sin, asin, sqrt
+
 from sklearn.metrics import confusion_matrix
 import seaborn as sn
 
@@ -36,28 +38,6 @@ def generate_trip_link_dict(path_df,link_df):
             if len(row)!=0:
                 row_index = row[0]
                 path_df.loc[row_index,'index'] = j+1           
-
-def get_sec(time_str):
-    if (pd.isnull(time_str))==False:
-        h,m,s=time_str.split(':')
-        return int(h)*3600+int(m)*60+int(s)
-    else: return 0
-
-def haversine(lon1, lat1, lon2, lat2):
-    """
-    Calculate the great circle distance between two points 
-    on the earth (specified in decimal degrees)
-    """
-    # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    r = 6371 # Radius of earth in kilometers. Use 3956 for miles
-    return c * r
 
 def get_dist(A_id,B_id):
     if A_id != 0 and B_id!=0:
