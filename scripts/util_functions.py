@@ -50,6 +50,17 @@ def prim_mode_hierarchy(df_pths, df_lnks, pri_mode_var):
         df_pths.loc[(df_pths[pri_mode_var]==missing_mode) & (df_pths['tmp_mode']==curr_mode), pri_mode_var] = str(i) + ' ' + curr_mode
         df_pths = df_pths.drop('tmp_mode', 1)
     return df_pths
-        
+
+#calculate access/egress distance
+def get_dist(row, taz_coords, stop_coords):
+    A_id = row[0]
+    B_id = row[1]
+    if A_id > 0 and B_id>0:
+        A_lat = taz_coords.loc[A_id,'lat']
+        A_lon = taz_coords.loc[A_id,'lon']
+        B_lat = stop_coords.loc[B_id,'stop_lat']
+        B_lon = stop_coords.loc[B_id,'stop_lon']
+        return haversine(A_lon, A_lat, B_lon, B_lat)
+    else: return 0        
 
 
