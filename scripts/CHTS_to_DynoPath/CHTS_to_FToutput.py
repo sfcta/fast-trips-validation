@@ -126,7 +126,7 @@ for p in PrsTrp:
                     #Generating a virtual transfer link
                     linknum = k
                     k = k+1
-                    xfer_strn = [(per_id, trip_id, 'transfer', '', '', '', '', date, '', '', '', '', '', '', linknum, 'transfer')]
+                    xfer_strn = [(per_id, trip_id, 'transfer', '', '', '', '', date, '', '', '', '', '', '', linknum, 'transfer','')]
                     Output = Output.append(xfer_strn)
                 
                     #transit link
