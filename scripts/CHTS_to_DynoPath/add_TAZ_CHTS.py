@@ -45,12 +45,30 @@ if RUNMODE==1:
     path_links_df.loc[path_links_df['linkmode']=='access', 'B_id'] = path_links_df.loc[path_links_df['linkmode']=='access', 'A_access']
     path_links_df.loc[path_links_df['linkmode']=='egress', 'A_id'] = path_links_df.loc[path_links_df['linkmode']=='egress', 'B_egress']
     
+    # fill in B_id and A_id for transfer links 
+    xfer_links = path_links_df.loc[path_links_df['linkmode']=='transfer',['person_id','person_trip_id','linknum']]
+    xfer_links['linknum'] += 1
+    xfer_links = xfer_links.merge(path_links_df[['person_id','person_trip_id','linknum','A_stop_id']], 
+                                      on=['person_id','person_trip_id','linknum'], how='left')
+    xfer_links = xfer_links[['person_id','person_trip_id','linknum','A_stop_id']]
+    xfer_links = xfer_links.rename(columns={'A_stop_id':'B_xfer'})
+    xfer_links['linknum'] -= 2
+    xfer_links = xfer_links.merge(path_links_df[['person_id','person_trip_id','linknum','B_stop_id']], 
+                                      on=['person_id','person_trip_id','linknum'], how='left')
+    xfer_links = xfer_links[['person_id','person_trip_id','linknum','B_xfer','B_stop_id']]
+    xfer_links = xfer_links.rename(columns={'B_stop_id':'A_xfer'})
+    xfer_links['linknum'] += 1
+    path_links_df = path_links_df.merge(xfer_links, how='left')
+    path_links_df.loc[path_links_df['linkmode']=='transfer', 'A_id'] = path_links_df.loc[path_links_df['linkmode']=='transfer', 'A_xfer']
+    path_links_df.loc[path_links_df['linkmode']=='transfer', 'B_id'] = path_links_df.loc[path_links_df['linkmode']=='transfer', 'B_xfer']
+    
     # add remaining variables and output
     path_links_df['A_seq'] = ""
     path_links_df['B_seq'] = ""
     path_links_df['service_id'] = ""
     path_links_df['trip_id'] = ""
-    path_links_df = path_links_df[['person_id','person_trip_id','linkmode','A_id','A_seq','B_id','B_seq','linknum','mode','route_id','trip_id','agency_id','service_id','board_time','alight_time']]
+    path_links_df = path_links_df[['person_id','person_trip_id','linkmode','A_id','A_seq','B_id','B_seq','linknum','mode','route_id','trip_id','agency_id',
+                                   'service_id','board_time','alight_time','new_A_time','new_B_time','new_linktime_min','new_waittime_min']]
 
     path_links_df.sort_values(by=["person_id","person_trip_id","linknum"], inplace=True)
     path_links_df.to_csv(os.path.join(work_dir, outfile_links), index=False)

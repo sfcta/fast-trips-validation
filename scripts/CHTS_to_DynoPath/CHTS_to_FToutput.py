@@ -91,7 +91,7 @@ for p in PrsTrp:
                 temp_lat = df.loc[i,'origin_lat']
                 temp_lon = df.loc[i,'origin_lon']
                 # Let us assume that the person is starting from the station itself instead of having an incomplete record
-                acc_strn = [(per_id, trip_id, 'access', temp_lat, temp_lon, temp_lat, temp_lon, date, temp_time, temp_time, 0, '', '', '', 0, '', '')]
+                acc_strn = [(per_id, trip_id, 'access', temp_lat, temp_lon, temp_lat, temp_lon, date, temp_time, temp_time, '', '', '', '', 0, 'walk_access', '')]
                 Output = Output.append(acc_strn)
         
             #Transit (first transit link)
@@ -140,7 +140,7 @@ for p in PrsTrp:
                     # TODO: Find B_id = destination_stop_id for B
                     A_time = df.loc[i-1,'end'] + ':00'
                     B_time = df.loc[i,'end'] + ':00'
-                    linktime = df.loc[i,'time2']-df.loc[i,'time1']   #df.loc[i,'duration_min']
+                    linktime = df.loc[i,'time2']-df.loc[i-1,'time2']   #df.loc[i,'duration_min']
                     wait = df.loc[i,'time1']-df.loc[i-1,'time2']
                     board_time = df.loc[i,'start'] + ':00'
                     linknum = k
@@ -218,7 +218,7 @@ for p in PrsTrp:
                 temp_lon = df.loc[i-1,'destination_lon']
                 linknum = k
                 k = k+1
-                egr_strn = [(per_id, trip_id, 'egress', temp_lat, temp_lon, temp_lat, temp_lon, date, temp_time, temp_time, '', '', '', '', linknum, '', '')]
+                egr_strn = [(per_id, trip_id, 'egress', temp_lat, temp_lon, temp_lat, temp_lon, date, temp_time, temp_time, '', '', '', '', linknum, 'walk_egress', '')]
                 Output = Output.append(egr_strn)
    
         else:
