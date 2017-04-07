@@ -1,12 +1,25 @@
 ### Various utility functions
+import os
 import pandas as pd
 from math import radians, cos, sin, asin, sqrt
+
+# read in TAZ and stop coordinates
+NETWORK_DIR = r'Q:\Model Development\SHRP2-fasttrips\Task2\built_fasttrips_network_2012Base\draft1.11_fare'
+taz_coords = pd.read_csv(os.path.join(NETWORK_DIR, 'taz_coords.txt'))
+taz_coords = taz_coords.set_index('taz')
+stop_coords = pd.read_csv(os.path.join(NETWORK_DIR, 'stops.txt'))
+stop_coords = stop_coords.set_index('stop_id')
 
 def get_sec(time_str):
     if (pd.isnull(time_str))==False:
         h,m,s=time_str.split(':')
         return int(h)*3600+int(m)*60+int(s)
     else: return 0
+
+def get_inveh_time(row):
+    t1=row['board_time']
+    t2=row['alight_time']
+    return get_sec(t2)-get_sec(t1)
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -51,16 +64,29 @@ def prim_mode_hierarchy(df_pths, df_lnks, pri_mode_var):
         df_pths = df_pths.drop('tmp_mode', 1)
     return df_pths
 
-#calculate access/egress distance
-def get_dist(row, taz_coords, stop_coords):
+#calculate access/egress distance, transfer distance, etc.
+def get_dist(row):
     A_id = row[0]
     B_id = row[1]
     if A_id > 0 and B_id>0:
-        A_lat = taz_coords.loc[A_id,'lat']
-        A_lon = taz_coords.loc[A_id,'lon']
-        B_lat = stop_coords.loc[B_id,'stop_lat']
-        B_lon = stop_coords.loc[B_id,'stop_lon']
+        if A_id >= 4002:
+            A_lat = stop_coords.loc[A_id,'stop_lat']
+            A_lon = stop_coords.loc[A_id,'stop_lon']
+        else:
+            A_lat = taz_coords.loc[A_id,'lat']
+            A_lon = taz_coords.loc[A_id,'lon']
+        if B_id >= 4002:
+            B_lat = stop_coords.loc[B_id,'stop_lat']
+            B_lon = stop_coords.loc[B_id,'stop_lon']
+        else: 
+            B_lat = taz_coords.loc[B_id,'lat']
+            B_lon = taz_coords.loc[B_id,'lon']
         return haversine(A_lon, A_lat, B_lon, B_lat)
-    else: return 0        
+
+        
+
+
+
+
 
 
