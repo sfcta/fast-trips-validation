@@ -3,23 +3,12 @@ import os
 import pandas as pd
 from math import radians, cos, sin, asin, sqrt
 
-# read in TAZ and stop coordinates
-NETWORK_DIR = r'Q:\Model Development\SHRP2-fasttrips\Task2\built_fasttrips_network_2012Base\draft1.11_fare'
-taz_coords = pd.read_csv(os.path.join(NETWORK_DIR, 'taz_coords.txt'))
-taz_coords = taz_coords.set_index('taz')
-stop_coords = pd.read_csv(os.path.join(NETWORK_DIR, 'stops.txt'))
-stop_coords = stop_coords.set_index('stop_id')
 
 def get_sec(time_str):
     if (pd.isnull(time_str))==False:
         h,m,s=time_str.split(':')
         return int(h)*3600+int(m)*60+int(s)
     else: return 0
-
-def get_inveh_time(row):
-    t1=row['board_time']
-    t2=row['alight_time']
-    return get_sec(t2)-get_sec(t1)
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -56,16 +45,23 @@ def prim_mode_hierarchy(df_pths, df_lnks, pri_mode_var):
     for curr_mode in MODE_HI:
         temp_df = df_lnks[df_lnks['mode']==curr_mode]
         temp_df = temp_df.rename(columns={'mode':'tmp_mode'})
-        temp_df = temp_df[['person_id','person_trip_id','tmp_mode']]
-        temp_df = temp_df.drop_duplicates(['person_id','person_trip_id'])
+        req_cols = ['person_id','person_trip_id','pathnum'] if 'pathnum' in temp_df.columns else ['person_id','person_trip_id']
+        temp_df = temp_df[req_cols+['tmp_mode']]
+        temp_df = temp_df.drop_duplicates(req_cols)
         df_pths = df_pths.merge(temp_df, how='left')
         i += 1
         df_pths.loc[(df_pths[pri_mode_var]==missing_mode) & (df_pths['tmp_mode']==curr_mode), pri_mode_var] = str(i) + ' ' + curr_mode
         df_pths = df_pths.drop('tmp_mode', 1)
     return df_pths
 
+def get_path_attrs(df, old_cols, new_cols, keep):
+    df = df.sort_values(['person_id','person_trip_id','linknum'])
+    df = df[['person_id','person_trip_id'] + old_cols].drop_duplicates(['person_id','person_trip_id'], keep=keep)
+    df.columns = ['person_id','person_trip_id'] + new_cols
+    return df
+
 #calculate access/egress distance, transfer distance, etc.
-def get_dist(row):
+def get_dist(row, taz_coords, stop_coords):
     A_id = row[0]
     B_id = row[1]
     if A_id > 0 and B_id>0:
@@ -82,6 +78,17 @@ def get_dist(row):
             B_lat = taz_coords.loc[B_id,'lat']
             B_lon = taz_coords.loc[B_id,'lon']
         return haversine(A_lon, A_lat, B_lon, B_lat)
+
+def melt_df(df, val_vars, valname):
+    retdf = pd.melt(df, id_vars=['person_id','person_trip_id'], 
+                    value_vars=val_vars,
+                    var_name='type',
+                    value_name=valname)
+    type_dict = dict(zip(val_vars, ['Observed','Modeled']))
+    retdf['type'] = retdf['type'].map(type_dict)
+    return retdf
+    
+
 
         
 

@@ -5,7 +5,7 @@
 ####################################################################################
 import pandas as pd
 import fasttrips
-NETWORK_DIR = r"C:\Code\fast-trips\Examples\sfcta\network_draft1.10_fare"
+NETWORK_DIR = r"C:\Code\fast-trips\Examples\sfcta\network_draft1.11_fare"
 
 # bridge from CHTS travel_mode => operator_type
 CHTS_MODE_TO_OPERATOR_TYPE = {
@@ -25,7 +25,7 @@ CHTS_MODE_TO_OPERATOR_TYPE = {
 NETWORK_AGENCY_TO_OPERATOR_TYPE = {
     "bart"                  :"BART",
     "airbart"               :"AirBART",
-    "ac_transit"            :"ac_transit",
+    "ac_transit"            :"GoldenGate/AC_transit",
     "caltrain"              :"ACE/Caltrain",
     "samtrans"              :"Local_bus/Rapid_bus",
     "golden_gate_transit"   :"GoldenGate/AC_transit",
@@ -44,9 +44,8 @@ NETWORK_AGENCY_TO_OPERATOR_TYPE = {
     "sf_muni"               :"sf_muni"
 }
 
-ac_transit_operations = ['GoldenGate/AC_transit']
 muni_operations = ["Local_bus/Rapid_bus", "MuniMetro/VTA", "Street_car/Cable_car"]
-max_dist = 0.2 # max distance for stop_id matching based on stops' lat/lon
+max_dist = 0.3 # max distance for stop_id matching based on stops' lat/lon
 
 def get_closest_stop(person_trips_df, vehicle_stops_df, location_prefix):
     # join the person trips with the stops
@@ -110,15 +109,10 @@ if __name__ == "__main__":
             # add sf_muni trips to service_vehicle_trips
             service_vehicle_trips = service_vehicle_trips.append(muni_vehicle_trips)
             if OPtype == 'Local_bus/Rapid_bus':
-                # add ac transit
-                ac_vehicle_trips = full_trips_df.loc[ full_trips_df["operator_type"] == 'ac_transit' ]
-                ac_vehicle_trips["operator_type"] = OPtype
-                service_vehicle_trips = service_vehicle_trips.append(ac_vehicle_trips)
-        # we also need to add ac transit trips for "GoldenGate/AC_transit"
-        if OPtype in ac_transit_operations:
-            ac_vehicle_trips = full_trips_df.loc[ full_trips_df["operator_type"] == 'ac_transit' ]
-            ac_vehicle_trips["operator_type"] = OPtype
-            service_vehicle_trips = service_vehicle_trips.append(ac_vehicle_trips)
+                # add ac transit and ggt also
+                acgg_vehicle_trips = full_trips_df.loc[ full_trips_df["operator_type"] == 'GoldenGate/AC_transit' ]
+                acgg_vehicle_trips["operator_type"] = OPtype
+                service_vehicle_trips = service_vehicle_trips.append(acgg_vehicle_trips)
         service_person_trips  = df.loc[ df["operator_type"] == OPtype ]
     
         print OPtype
@@ -142,6 +136,7 @@ if __name__ == "__main__":
     screen_uids = new_df.loc[(new_df['A_route_id']==new_df['B_route_id']) & (pd.notnull(new_df['A_route_id'])), 'Unique_ID'].unique()
     new_df1 = new_df.loc[new_df['Unique_ID'].isin(screen_uids),]
     new_df1 = new_df.loc[(new_df['A_route_id']==new_df['B_route_id']) & (pd.notnull(new_df['A_route_id'])),]
+    new_df1 = new_df1.sort_values(['Unique_ID','sum_dist'])
     new_df1 = new_df1.groupby(['Unique_ID']).head(1)
     
     # now, deal with the records for which the A and B routes don't match. It appears like BART transfers are not being detected by GPS in some cases

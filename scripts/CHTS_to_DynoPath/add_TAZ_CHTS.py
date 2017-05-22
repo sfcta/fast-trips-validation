@@ -62,6 +62,12 @@ if RUNMODE==1:
     path_links_df.loc[path_links_df['linkmode']=='transfer', 'A_id'] = path_links_df.loc[path_links_df['linkmode']=='transfer', 'A_xfer']
     path_links_df.loc[path_links_df['linkmode']=='transfer', 'B_id'] = path_links_df.loc[path_links_df['linkmode']=='transfer', 'B_xfer']
     
+    # Identify express_bus links
+    path_links_df.loc[(path_links_df['route_id'].str.startswith('sf_muni_', na=False)) &
+                      (path_links_df['route_id'].str.endswith('X', na=False)) &
+                      (path_links_df['linkmode']=='transit') &
+                      (path_links_df['mode']=='local_bus'), 'mode'] = 'express_bus'
+    
     # add remaining variables and output
     path_links_df['A_seq'] = ""
     path_links_df['B_seq'] = ""
