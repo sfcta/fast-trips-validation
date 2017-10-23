@@ -62,6 +62,9 @@ if RUNMODE==1:
     path_links_df.loc[path_links_df['linkmode']=='transfer', 'A_id'] = path_links_df.loc[path_links_df['linkmode']=='transfer', 'A_xfer']
     path_links_df.loc[path_links_df['linkmode']=='transfer', 'B_id'] = path_links_df.loc[path_links_df['linkmode']=='transfer', 'B_xfer']
     
+    # convert 'transit' and 'street_car' to 'local_bus' for now
+    path_links_df.loc[path_links_df['mode']=='transit', 'mode'] = 'local_bus'
+    path_links_df.loc[path_links_df['mode']=='street_car', 'mode'] = 'local_bus'
     # Identify express_bus links
     path_links_df.loc[(path_links_df['route_id'].str.startswith('sf_muni_', na=False)) &
                       (path_links_df['route_id'].str.endswith('X', na=False)) &
