@@ -2,12 +2,15 @@
 
 This repository contains scripts to transform both the transit On-Board Survey (OBS) and California Household Travel Survey (CHTS) to both [dyno-demand][demand-standard-url] and [dyno-path][dyno-path-url] formats. In addition, there are also scripts to process both survey data and Fast-Trips output data (in [dyno-path][dyno-path-url] format) and summarize them for calibration and validation purposes. These scripts create input files that can be plugged into Tableau Dashboards. All the scripts can be found in the [scripts](scripts/) directory of this repository.
 
-[CHTS to DynoPath Conversion](#chts-to-dynopath-conversion)
-[CHTS Validation DashBoard](#chts-validation-dashboard)
+- [CHTS to DynoPath Conversion](#chts-to-dynopath-conversion)
+- [CHTS Validation DashBoard](#chts-validation-dashboard)
+- [Python Notebooks (old/deprecated)](#python-notebooks-olddeprecated)
 
 ## CHTS to DynoPath Conversion
+This section describes the conversion of CHTS gps data into dyno-path format.
 
 ## CHTS Validation Dashboard
+This section describes using Fast-Trips output and survey data (both in dyno-path format) to create input files for a calibration and validation dashboard in Tableau.
 
 ## Python Notebooks (old/deprecated)
 
