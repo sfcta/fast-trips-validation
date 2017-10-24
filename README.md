@@ -4,15 +4,19 @@ This repository contains scripts to transform both the transit On-Board Survey (
 
 - [CHTS to DynoPath Conversion](#chts-to-dynopath-conversion)
 - [CHTS Validation DashBoard](#chts-validation-dashboard)
-- [Python Notebooks (old/deprecated)](#python-notebooks-olddeprecated)
+- [Python Notebooks (old/deprecated)](#python-notebooks-old)
 
 ## CHTS to DynoPath Conversion
-This section describes the conversion of CHTS gps data into dyno-path format.
+This section describes the conversion of CHTS gps data into dyno-path format. The primary input file is based on GPS traces and is called `w_gpstrips.csv`. Due to privacy restrictions, this file is available and needs to be processed only on SFCTA servers. However, the following scripts could be adapted to process any survey data with adequate details about transit trips and convert to [dyno-path][dyno-path-url] format.
+
+1. [CHTS_to_FToutput.py](scripts/CHTS_to_DynoPath/CHTS_to_FToutput.py): this script takes in `w_gpstrips.csv` file from CHTS as input and identifies distinct transit trips and various components such as sub-mode, access/egress, transfer etc. There are some assumptions regarding maximum walk time, initial wait time, transfer wait time etc. The output file is called `CHTS_ft_output.csv`.
+
+2. [add_StopID_RouteID_CHTS_v2.py](scripts/CHTS_to_DynoPath/add_StopID_RouteID_CHTS_v2.py): the latest version of this script uses `CHTS_ft_output.csv` as input and based on lat-long and time stamp information, attempts to identify not only transit stops (boarding/alighting/transfer) but also specific transit trips (service ids) for a given transit network and schedule ([GTFS-Plus][gtfs-plus-url]). This helps in the identification of the detailed transit path that could have been used by the respondent which in turn can be compared to that found by Fast-Trips. The output file is `CHTS_FToutput_wStops_wRoutes_v2.csv`.
 
 ## CHTS Validation Dashboard
 This section describes using Fast-Trips output and survey data (both in dyno-path format) to create input files for a calibration and validation dashboard in Tableau.
 
-## Python Notebooks (old/deprecated)
+## Python Notebooks (old)
 
 ### Generate Tableau Input
 
@@ -38,3 +42,5 @@ Update the location for "chosenpaths_links" and "path_comparison" data sources. 
 
 [demand-standard-url]: <https://github.com/osplanning-data-standards/dyno-demand>
 [dyno-path-url]: <https://github.com/osplanning-data-standards/dyno-path>
+[gtfs-plus-url]: <https://github.com/osplanning-data-standards/GTFS-PLUS>
+
