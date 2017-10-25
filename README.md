@@ -4,7 +4,7 @@ This repository contains scripts to transform both the transit On-Board Survey (
 
 - [CHTS to DynoPath Conversion](#chts-to-dynopath-conversion)
 - [CHTS Validation DashBoard](#chts-validation-dashboard)
-- [Python Notebooks (old/deprecated)](#python-notebooks-old)
+- [Python Notebooks (old)](#python-notebooks-old)
 
 ## CHTS to DynoPath Conversion
 This section describes the conversion of CHTS gps data into dyno-path format. The primary input file is based on GPS traces and is called `w_gpstrips.csv`. Due to privacy restrictions, this file is available and needs to be processed only on SFCTA servers. However, the following scripts could be adapted to process any survey data with adequate details about transit trips and convert to [dyno-path][dyno-path-url] format.
@@ -12,6 +12,12 @@ This section describes the conversion of CHTS gps data into dyno-path format. Th
 1. [CHTS_to_FToutput.py](scripts/CHTS_to_DynoPath/CHTS_to_FToutput.py): this script takes in `w_gpstrips.csv` file from CHTS as input and identifies distinct transit trips and various components such as sub-mode, access/egress, transfer etc. There are some assumptions regarding maximum walk time, initial wait time, transfer wait time etc. The output file is called `CHTS_ft_output.csv`.
 
 2. [add_StopID_RouteID_CHTS_v2.py](scripts/CHTS_to_DynoPath/add_StopID_RouteID_CHTS_v2.py): the latest version of this script uses `CHTS_ft_output.csv` as input and based on lat-long and time stamp information, attempts to identify not only transit stops (boarding/alighting/transfer) but also specific transit trips (service ids) for a given transit network and schedule ([GTFS-Plus][gtfs-plus-url]). This helps in the identification of the detailed transit path that could have been used by the respondent which in turn can be compared to that found by Fast-Trips. The output file is `CHTS_FToutput_wStops_wRoutes_v2.csv`.
+
+3. **Add Origin/Destination TAZ**: the processed output file from the previous step contains the origin and destination lat-longs of transit trips. These need to be geocoded to TAZs so that TAZ-TAZ level transit demand can be generated and then run through Fast-Trips path-finding. The paths found by Fast-Trips can be validated against those inferred from survey GPS traces. Geocoding needs to be done using an offline process (for example using ArcGIS) in which `A_lon,A_lat` are mapped to `A_TAZ` (origin zone) and `B_lon,B_lat` are mapped to `B_TAZ` (destination zone). The output file is `CHTS_FToutput_wTAZ.csv`.
+
+4. [output_dynopath.py](scripts/CHTS_to_DynoPath/output_dynopath.py): this is the final step that outputs the converted survey in dyno-path format. However, it needs to be run in two steps: 
+- In the first step (`RUNMODE = 1`), the script computes a few additional variables and outputs the `pathset_links.csv` file. This file is used by the dyno-demand conversion script to generate a demand file for Fast-Trips as a trip list.
+- The trip file in turn is used as an additional input in the second step (`RUNMODE = 2`) to output `pathset_paths.csv` file.
 
 ## CHTS Validation Dashboard
 This section describes using Fast-Trips output and survey data (both in dyno-path format) to create input files for a calibration and validation dashboard in Tableau.
