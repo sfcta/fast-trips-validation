@@ -1,6 +1,6 @@
 ### Various utility functions
-import os
 import pandas as pd
+import numpy as np
 from math import radians, cos, sin, asin, sqrt
 
 
@@ -87,6 +87,12 @@ def melt_df(df, val_vars, valname):
     type_dict = dict(zip(val_vars, ['Observed','Modeled']))
     retdf['type'] = retdf['type'].map(type_dict)
     return retdf
+
+def filterby_pid(fildf, df):
+    filids = np.unique(fildf['person_id'].values + '_' + fildf['person_trip_id'].astype(str))
+    df = df.loc[~((df['person_id'].values + '_' + df['person_trip_id'].astype(str)).isin(filids)),]
+    return df
+
     
 
 
