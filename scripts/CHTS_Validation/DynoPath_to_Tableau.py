@@ -82,6 +82,7 @@ temp_df = get_path_attrs(obs_links, ['B_id'], ['d_taz'], keep='last')
 compare_paths = compare_paths.merge(temp_df, how='left')
 # remove any intra-taz trips from comparison
 compare_paths = compare_paths.loc[compare_paths['o_taz']!=compare_paths['d_taz'],]
+
 ### access/egress time, and distance
 dfs = [obs_links, mod_chosen_links]
 sources = ['obs','mod']
@@ -109,6 +110,7 @@ for src,df in zip(sources,dfs):
     temp_df = temp_df[['person_id','person_trip_id','%s' %xfer_wait_col]].groupby(['person_id','person_trip_id']).sum().reset_index()
     temp_df.columns = ['person_id','person_trip_id','%s_xwait_time' %src]
     compare_paths = compare_paths.merge(temp_df, how='left')  
+
 # obs paths with more than 3 transfers are probably not accurate
 compare_paths = compare_paths.loc[compare_paths['obs_xfer_count']<4,]
 

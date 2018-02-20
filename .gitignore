@@ -1,4 +1,9 @@
 *.pyc
 _rundir*
+.settings*
+notebooks/.ipynb_checkpoint*
 *.project
 *.pydevproject
+*.log
+
+
