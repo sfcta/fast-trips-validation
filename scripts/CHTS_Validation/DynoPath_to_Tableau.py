@@ -100,7 +100,7 @@ for src,df in zip(sources,dfs):
     temp_df['xfer_time'] = temp_df['new_linktime_min'] if 'new_linktime_min' in temp_df.columns else temp_df['new_linktime min']
     temp_df['xfer_count'] = 1
     temp_df = temp_df[['person_id','person_trip_id','xfer_count','xfer_time','xfer_dist']].groupby(['person_id','person_trip_id']).sum().reset_index()
-    temp_df.columns = ['person_id','person_trip_id','%s_xfer_count' %src,'%s_xfer_time' %src,'%s_xfer_dist' %src]
+    temp_df.columns = ['person_id','person_trip_id','%s_xfer_count' %src,'%s_xtrav_time' %src,'%s_xfer_dist' %src]
     compare_paths = compare_paths.merge(temp_df, how='left')
     compare_paths['%s_xfer_count' %src] = compare_paths['%s_xfer_count' %src].fillna(0)
     
@@ -110,6 +110,8 @@ for src,df in zip(sources,dfs):
     temp_df = temp_df[['person_id','person_trip_id','%s' %xfer_wait_col]].groupby(['person_id','person_trip_id']).sum().reset_index()
     temp_df.columns = ['person_id','person_trip_id','%s_xwait_time' %src]
     compare_paths = compare_paths.merge(temp_df, how='left')  
+    ## total xfer time
+    compare_paths['%s_xfer_time' %src] = compare_paths['%s_xtrav_time' %src] + compare_paths['%s_xwait_time' %src]
 
 # obs paths with more than 3 transfers are probably not accurate
 compare_paths = compare_paths.loc[compare_paths['obs_xfer_count']<4,]
