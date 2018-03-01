@@ -20,7 +20,7 @@ This section describes the conversion of CHTS gps data into dyno-path format. Th
 - The trip file in turn is used as an additional input in the second step (`RUNMODE = 2`) to output `pathset_paths.csv` file.
 
 ## CHTS Validation Dashboard
-This section describes using Fast-Trips output and survey data (both in dyno-path format) to create input files for a calibration and validation dashboard in Tableau. The calibration and validation process would first involve running the demand/trip list from observed data (CHTS in this case) through Fast-Trips and then comparing the modeled and observed transit paths. The various metrics used for the comparison are prepared using the following script.
+This section describes using Fast-Trips output and survey data (both in [dyno-path][dyno-path-url] format) to create input files for a calibration and validation dashboard in Tableau. The calibration and validation process would first involve running the demand/trip list from observed data (CHTS in this case) through Fast-Trips and then comparing the modeled and observed transit paths. The various metrics used for the comparison are prepared using the following script.
 
 [DynoPath_to_Tableau.py](scripts/CHTS_Validation/DynoPath_to_Tableau.py): this needs the locations of observed CHTS transit paths in dyno-path format (prepartion described in [CHTS to DynoPath Conversion](#chts-to-dynopath-conversion) section above) and the model output paths among other network inputs. The script generates two output files, `pathset_compare.csv` and `pathset_compare_melt.csv`, which are in turn used by Tableau validation dashboard. 
 
