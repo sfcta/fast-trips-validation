@@ -1,7 +1,7 @@
 ######################################################################################################
 # Prepares DynoPath files from observed data source and FT model run to be compared in Tableau
 # Reads: pathset_paths.csv and pathset_links.csv
-# Writes: pathset_compare.csv, xfer-links-obs.csv, xfer-links-mod.csv
+# Writes: pathset_compare.csv and pathset_compare_melt.csv (input files for Tableau workbook)
 #######################################################################################################
 
 import time, sys, os
@@ -12,9 +12,12 @@ import numpy as np
 
 start       = time.time()
 
+# paths locations for model and observed data; both must contain pathset_paths.csv and pathset_links.csv files
 OBS_DIR = r'Q:\Data\Surveys\HouseholdSurveys\CHTS2012\Data\W1_CHTS_GPS_Final_Data_Deliverable_Wearable'
 MODEl_DIR = r'C:\Code\fast-trips\Examples\sfcta\output\Run7.1'
+# output directory to write out pathset_compare.csv and pathset_compare_melt.csv
 OUT_DIR = r'Q:\Model Development\SHRP2-fasttrips\Task4\ft_output'
+# network directory used for creating observed path files and FT run with observed demand data
 NETWORK_DIR = r'Q:\Model Development\SHRP2-fasttrips\Task2\built_fasttrips_network_2012Base\draft1.14_fare'
 taz_corr_file = r'Y:\champ\dev\5.1.0_abmxfer\R_Summaries\data\taz_districts_sfcta.csv'
 
