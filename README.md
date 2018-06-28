@@ -16,6 +16,11 @@ This section describes the conversion of CHTS gps data into dyno-path format. Th
 
 1. [CHTS_to_FToutput.py](scripts/CHTS_to_DynoPath/CHTS_to_FToutput.py): this script takes in `w_gpstrips.csv` file from CHTS as input and identifies distinct transit trips and various components such as sub-mode, access/egress, transfer etc. There are some assumptions regarding maximum walk time, initial wait time, transfer wait time etc. The output file is called `CHTS_ft_output.csv`.
 
+    * max access/egress walk = 50 min
+    * max initial wait time = 30 min
+    * max transfer wait time = 20 min
+    * max time to get off the transit vehicle = 2 min
+
 2. [add_StopID_RouteID_CHTS_v2.py](scripts/CHTS_to_DynoPath/add_StopID_RouteID_CHTS_v2.py): the latest version of this script uses `CHTS_ft_output.csv` as input and based on lat-long and time stamp information, attempts to identify not only transit stops (boarding/alighting/transfer) but also specific transit trips (service ids) for a given transit network and schedule ([GTFS-Plus][gtfs-plus-url]). This helps in the identification of the detailed transit path that could have been used by the respondent which in turn can be compared to that found by Fast-Trips. The output file is `CHTS_FToutput_wStops_wRoutes_v2.csv`.
 
 3. **Add Origin/Destination TAZ**: the processed output file from the previous step contains the origin and destination lat-longs of transit trips. These need to be geocoded to TAZs so that TAZ-TAZ level transit demand can be generated and then run through Fast-Trips path-finding. The paths found by Fast-Trips can be validated against those inferred from survey GPS traces. Geocoding needs to be done using an offline process (for example using ArcGIS) in which `A_lon,A_lat` are mapped to `A_TAZ` (origin zone) and `B_lon,B_lat` are mapped to `B_TAZ` (destination zone). The output file is `CHTS_FToutput_wTAZ.csv`.
@@ -40,10 +45,9 @@ Once output files are generated using the script above, the Validation Dashboard
 ### Assumptions:
 
 1. Value of time was calculated using the following rules: (based on [SFCTA RPM-9 Report](https://drive.google.com/file/d/0B0tvdqs1FsGZcTBhRms3aXJqZGs/view?pli=1), p39):
-
- * Non-work VoT = 2/3 work VoT,
- * Impose a minimum of $1/hour and a maximum of $50/hour,
- * Impose a maximum of $5/hour for workers younger than 18 years old.
+    * Non-work VoT = 2/3 work VoT,
+    * Impose a minimum of $1/hour and a maximum of $50/hour,
+    * Impose a maximum of $5/hour for workers younger than 18 years old.
 
 2. OBS only contains departure hour (and not minutes). In order to translate these hours into hour-minutes, departure hour distributions (`DepartureTimeCDFs.dat`) have been generated based on time period distributions in `PreferredDepartureTime.dat`.
 
