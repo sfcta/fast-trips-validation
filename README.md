@@ -2,9 +2,14 @@
 
 This repository contains scripts to transform both the transit On-Board Survey (OBS) and California Household Travel Survey (CHTS) to both [dyno-demand][demand-standard-url] and [dyno-path][dyno-path-url] formats. In addition, there are also scripts to process both survey data and Fast-Trips output data (in [dyno-path][dyno-path-url] format) and summarize them for calibration and validation purposes. These scripts create input files that can be plugged into Tableau Dashboards. All the scripts can be found in the [scripts](scripts/) directory of this repository.
 
+- [CHTS to DynoDemand Conversion](#chts-to-dynodemand-conversion)
 - [CHTS to DynoPath Conversion](#chts-to-dynopath-conversion)
-- [CHTS Validation DashBoard](#chts-validation-dashboard)
-- [Python Notebooks (old)](#python-notebooks-old)
+- [Validation DashBoard](#validation-dashboard)
+- [OBS to DynoDemand Conversion](#obs-to-dynodemand-conversion)
+- [OBS to DynoPath Conversion](#obs-to-dynopath-conversion)
+
+## CHTS to DynoDemand Conversion
+The scripts(s) for converting CHTS gps data into deno-demand format currently reside in a separate repository. Please click [here][ft-demand-url] for more details.
 
 ## CHTS to DynoPath Conversion
 This section describes the conversion of CHTS gps data into dyno-path format. The primary input file is based on GPS traces and is called `w_gpstrips.csv`. Due to privacy restrictions, this file is available and needs to be processed only on SFCTA servers. However, the following scripts could be adapted to process any survey data with adequate details about transit trips and convert to [dyno-path][dyno-path-url] format. Some of these scripts use Fast-Trips library, so in order to run them, Fast-Trips should be installed (see instructions [here][ft-setup-url])
@@ -19,12 +24,38 @@ This section describes the conversion of CHTS gps data into dyno-path format. Th
 - In the first step (`RUNMODE = 1`), the script computes a few additional variables and outputs the `pathset_links.csv` file. This file is used by the dyno-demand conversion script to generate a demand file for Fast-Trips as a trip list (see [here][ft-demand-url] for more details about developing demand files).
 - The trip file in turn is used as an additional input in the second step (`RUNMODE = 2`) to output `pathset_paths.csv` file.
 
-## CHTS Validation Dashboard
-This section describes using Fast-Trips output and survey data (both in [dyno-path][dyno-path-url] format) to create input files for a calibration and validation dashboard in Tableau. The calibration and validation process would first involve running the demand/trip list from observed data (CHTS in this case) through Fast-Trips and then comparing the modeled and observed transit paths. The various metrics used for the comparison are prepared using the following script.
+## Validation Dashboard
+This section describes using Fast-Trips output and survey data (both in [dyno-path][dyno-path-url] format) to create input files for a calibration and validation dashboard in Tableau. The calibration and validation process would first involve running the demand/trip list from observed data (CHTS or OBS in this case) through Fast-Trips and then comparing the modeled and observed transit paths. The various metrics used for the comparison are prepared using the following script.
 
 [DynoPath_to_Tableau.py](scripts/CHTS_Validation/DynoPath_to_Tableau.py): this needs the locations of observed CHTS transit paths in dyno-path format (prepartion described in [CHTS to DynoPath Conversion](#chts-to-dynopath-conversion) section above) and the model output paths among other network inputs. The script generates two output files, `pathset_compare.csv` and `pathset_compare_melt.csv`, which are in turn used by Tableau validation dashboard. 
 
 Once output files are generated using the script above, the Validation Dashboard template workbook `Validation_DashBoard.twb` needs to be downloaded (from [here](tableau/)) and the two data sources need to be replaced ([Tableau Data Source Replacement][tableau-replace-url]) to update the metrics in the dashboard.
+
+## OBS to DynoDemand Conversion
+
+1. [add_SFtaz_to_OBS.py](scripts/OBS_to_DynoDemand/MTCmaz_to_SFtaz/add_SFtaz_to_OBS.py): Converts MTC origin/destination MAZs in original OBS file (OBSdata_wBART.csv) to SF TAZs and adds them as two new columns to OBS file, producing OBSdata_wBART_wSFtaz.csv.
+
+2. [OBS_to_DynoDemand.py](scripts/OBS_to_DynoDemand/OBS_to_DynoDemand.py): converts OBSdata_wBART_wSFtaz.csv to [Dyno-Demand] [demand-standard-url] files (trip_list.txt, household.txt, person.txt).
+
+### Assumptions:
+
+1. Value of time was calculated using the following rules: (based on [SFCTA RPM-9 Report](https://drive.google.com/file/d/0B0tvdqs1FsGZcTBhRms3aXJqZGs/view?pli=1), p39):
+
+ * Non-work VoT = 2/3 work VoT,
+ * Impose a minimum of $1/hour and a maximum of $50/hour,
+ * Impose a maximum of $5/hour for workers younger than 18 years old.
+
+2. OBS only contains departure hour (and not minutes). In order to translate these hours into hour-minutes, departure hour distributions (`DepartureTimeCDFs.dat`) have been generated based on time period distributions in `PreferredDepartureTime.dat`.
+
+## OBS to DynoPath Conversion
+
+1. [add_StopID_OBS.py](scripts/OBS_to_DynoPath/Add_StopID_OBS/add_StopID_OBS.py): Finds corresponding stop_id's for all boarding/alighting locations in OBS by matching stops' lat/long, service_id and route_id with those in GTFS PLus network data, producing OBSdata_wBART_wSFtaz_wStops.csv.
+
+2. [OBS_to_DynoPath.py](scripts/OBS_to_DynoPath/OBS_to_DynoPath.py): converts OBSdata_wBART_wSFtaz_wStops.csv to [Dyno-Path] [dyno-path-url].
+
+Notes: 
+* This conversion is being done for the purpose of validation, and the output file does not necessarily contain all the required attributes designed for dyno-path format.
+* [add_StopID_OBS.py](scripts/OBS_to_DynoPath/Add_StopID_OBS/add_StopID_OBS.py) uses Fast-Trips library, so in order to run it, Fast-Trips should be installed (See instructions [here][ft-setup-url]).
 
 [demand-standard-url]: <https://github.com/osplanning-data-standards/dyno-demand>
 [dyno-path-url]: <https://github.com/osplanning-data-standards/dyno-path>
